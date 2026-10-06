@@ -1,0 +1,5 @@
+src/tahta_kilit/*.py usr/lib/python3/dist-packages/tahta_kilit
+share/tahta-kilit-verifier.service lib/systemd/system
+share/tahta-kilit-ui.service lib/systemd/user
+share/start-ui.sh usr/lib/tahta-kilit
+share/tahta-kilit.desktop etc/xdg/autostart

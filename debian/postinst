@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    if ! getent group tahta-kilit >/dev/null; then
+        addgroup --system tahta-kilit
+    fi
+    install -d -o root -g tahta-kilit -m 0750 /etc/tahta-kilit
+    systemctl daemon-reload
+fi
+
+# Servisler yönetici anahtar/config dosyalarını provision aracı oluşturduktan sonra açılır.
+exit 0

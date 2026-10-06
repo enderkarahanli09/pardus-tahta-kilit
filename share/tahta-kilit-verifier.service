@@ -1,0 +1,22 @@
+[Unit]
+Description=Pardus tahta kilidi yerel kod doğrulama servisi
+After=local-fs.target
+
+[Service]
+Type=simple
+User=root
+Group=tahta-kilit
+RuntimeDirectory=tahta-kilit
+RuntimeDirectoryMode=0750
+UMask=0007
+ExecStart=/usr/bin/python3 -m tahta_kilit.verifier_service
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/run/tahta-kilit
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+# Do not start the verifier during package installation, before the board key
+# and board configuration have been provisioned by the administrator.
+override_dh_installsystemd:
+	dh_installsystemd --no-enable --no-start

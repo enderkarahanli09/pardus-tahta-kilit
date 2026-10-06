@@ -1,0 +1,12 @@
+[Unit]
+Description=Pardus ETAP dokunmatik tahta kilit ekranı
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m tahta_kilit.lock_screen
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

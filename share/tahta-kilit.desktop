@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Tahta Kilidi
+Comment=ETAP tahta kilidini başlat
+Exec=/usr/lib/tahta-kilit/start-ui.sh
+Terminal=false
+X-GNOME-Autostart-enabled=true

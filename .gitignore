@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*.deb
+/build/
+/dist/
+config.local.json
+board.key
+*.key
