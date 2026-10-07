@@ -187,6 +187,7 @@ Gerçek ETAP'ta `Alt+Tab`, `Alt+F4`, `Ctrl+Alt+F1…F6`, güç menüsü, oturum 
 - `/etc/tahta-kilit/board.key`: root sahibi, `0600`; yalnız root doğrulama servisi okur.
 - `/etc/tahta-kilit/config.json`: root ve `tahta-kilit` grubu; arayüz yalnız tahta kimliği/web URL'sini okur.
 - `/run/tahta-kilit/verifier.sock`: root:`tahta-kilit`, `0660`; yalnız yetkilendirilmiş yerel grup erişir.
+- Doğrulama servisi root olarak çalışsa da `CAP_CHOWN` dışındaki Linux yetkileri sınırlandırılmıştır; ağ adres aileleri, eşzamanlı istemci sayısı, görev ve bellek kullanımı da kısıtlanır.
 - Öğretmen web/API sırrı, OneDrive bağlantısı ve Excel satırları UI sürecine ve öğrenci hesabına aktarılmaz.
 
 ### İşletim sistemi düzeyi kısıtlar
@@ -197,7 +198,9 @@ Gerçek ETAP'ta `Alt+Tab`, `Alt+F4`, `Ctrl+Alt+F1…F6`, güç menüsü, oturum 
 4. UEFI/BIOS yönetici parolası ve harici USB'den önyükleme kurallarını okul yöneticisi ayarlasın.
 5. `TAHTA_KILIT_TEST_MODE=1` yalnız test içindir. Gerçek oturumun autostart veya systemd tanımına eklemeyin.
 
-GTK penceresini tam ekrana almak, TTY geçişini veya pencere yöneticisi kısayollarını tek başına engellemez. Yönetici/root yetkisine erişebilen biri uygulamayı durdurabilir, kaldırabilir veya anahtarları değiştirebilir; yazılımın amacı yöneticiye karşı koruma sağlamak değildir. Fiziksel güç düğmesi, BIOS, harici önyükleme ve işletim sistemi açıklarına karşı garanti verilmez.
+**Yayın engeli:** Arayüz `systemd --user` biriminde, oturum kullanıcısının yetkileriyle çalışır. Aynı hesap terminal veya başka bir yönetim aracı açabiliyorsa `systemctl --user stop/disable tahta-kilit-ui.service` komutuyla kilidi durdurabilir; `Restart=always` bu kasıtlı durdurmayı engellemez. Bu nedenle öğrenci hesabı ETAP kiosk oturumuyla sınırlandırılmalı, terminal/kısayollar engellenmeli ve uygulama oturum yöneticisi tarafından korunmalıdır. Yalnız GTK tam ekranı öğrenciyi kilitlemek için yeterli değildir.
+
+Yönetici/root yetkisine erişebilen biri uygulamayı durdurabilir, kaldırabilir veya anahtarları değiştirebilir; yazılımın amacı yöneticiye karşı koruma sağlamak değildir. Fiziksel güç düğmesi, BIOS, harici önyükleme ve işletim sistemi açıklarına karşı garanti verilmez. Gerçek ETAP'ta `Alt+Tab`, `Alt+F4`, `Ctrl+Alt+F1…F6`, güç menüsü, oturum kapatma, kiosk oturumu ve uygulama servisinin öğrenci hesabından durdurulamaması ayrıca doğrulanmalıdır.
 
 ## Sorun giderme
 

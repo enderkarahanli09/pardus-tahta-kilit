@@ -1,6 +1,7 @@
 """Root yetkili Unix soketi üzerinden çevrimdışı QR/kod doğrulayıcısı."""
 
 import json
+import grp
 import logging
 import os
 import secrets
@@ -9,8 +10,9 @@ import stat
 import threading
 import time
 from collections import deque
+from urllib.parse import urlsplit
 
-from tahta_kilit.protocol import code_matches, qr_signature
+from tahta_kilit.protocol import BOARD_ID_PATTERN, code_matches, qr_signature
 
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 KEY_PATH = "/etc/tahta-kilit/board.key"
@@ -21,6 +23,8 @@ UNLOCK_SECONDS = 40 * 60
 MAX_BAD_CODES_PER_CHALLENGE = 5
 MAX_BAD_CODES_PER_TEN_MINUTES = 10
 MAX_REQUEST_BYTES = 4096
+MAX_CONCURRENT_CLIENTS = 8
+MAX_CONFIG_BYTES = 4096
 
 
 class ServiceError(Exception):
@@ -31,22 +35,64 @@ class ServiceError(Exception):
 
 
 def read_config():
-    with open(CONFIG_PATH, "r", encoding="utf-8") as config_file:
-        config = json.load(config_file)
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(CONFIG_PATH, flags)
+    with os.fdopen(descriptor, "rb") as config_file:
+        info = os.fstat(config_file.fileno())
+        expected_group = grp.getgrnam(SOCKET_GROUP).gr_gid
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != 0
+            or info.st_gid != expected_group
+            or stat.S_IMODE(info.st_mode) != 0o640
+            or info.st_size > MAX_CONFIG_BYTES
+        ):
+            raise PermissionError("Tahta yapılandırması root tarafından korunmalıdır.")
+        raw_config = config_file.read(MAX_CONFIG_BYTES + 1)
+    if len(raw_config) > MAX_CONFIG_BYTES:
+        raise ValueError("Tahta yapılandırması çok büyük.")
+    config = json.loads(raw_config.decode("utf-8"))
+    if not isinstance(config, dict):
+        raise ValueError("Tahta yapılandırması geçersiz.")
     board_id = config.get("board_id")
     site_url = config.get("site_url")
-    if not isinstance(board_id, str):
+    if not isinstance(board_id, str) or not BOARD_ID_PATTERN.fullmatch(board_id):
         raise ValueError("Tahta kimliği yapılandırılmamış.")
-    if not isinstance(site_url, str) or not site_url.startswith("https://"):
+    if not isinstance(site_url, str) or len(site_url) > 2048:
         raise ValueError("Web adresi HTTPS olmalıdır.")
+    try:
+        parsed_url = urlsplit(site_url)
+        port = parsed_url.port
+    except ValueError as error:
+        raise ValueError("Web adresi geçersiz.") from error
+    if (
+        site_url != site_url.strip()
+        or any(ord(character) < 0x21 or ord(character) == 0x7F for character in site_url)
+        or parsed_url.scheme != "https"
+        or not parsed_url.hostname
+        or port not in (None, 443)
+        or parsed_url.username
+        or parsed_url.password
+        or parsed_url.path not in ("", "/", "/ac")
+        or parsed_url.query
+        or parsed_url.fragment
+    ):
+        raise ValueError("Web adresi HTTPS olmalı ve yalnız /ac yolu kullanmalıdır.")
     return {"board_id": board_id, "site_url": site_url}
 
 
 def read_key():
-    info = os.stat(KEY_PATH)
-    if info.st_uid != 0 or stat.S_IMODE(info.st_mode) & 0o077:
-        raise PermissionError("Tahta anahtarı root tarafından korunmalıdır.")
-    with open(KEY_PATH, "rb") as key_file:
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(KEY_PATH, flags)
+    with os.fdopen(descriptor, "rb") as key_file:
+        info = os.fstat(key_file.fileno())
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != 0
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_size != 32
+        ):
+            raise PermissionError("Tahta anahtarı root tarafından korunmalıdır.")
         key = key_file.read(33)
     if len(key) != 32:
         raise ValueError("Tahta anahtarı tam olarak 32 bayt olmalıdır.")
@@ -181,10 +227,34 @@ class RequestHandler(socketserver.StreamRequestHandler):
 class UnixServer(socketserver.ThreadingUnixStreamServer):
     daemon_threads = True
     allow_reuse_address = True
+    request_queue_size = 16
 
     def __init__(self, socket_path, verifier):
         self.verifier = verifier
+        self.request_slots = threading.BoundedSemaphore(MAX_CONCURRENT_CLIENTS)
         super().__init__(socket_path, RequestHandler)
+
+    def process_request(self, request, client_address):
+        if not self.request_slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        worker = threading.Thread(
+            target=self.process_request_thread,
+            args=(request, client_address),
+            daemon=self.daemon_threads,
+        )
+        try:
+            worker.start()
+        except Exception:
+            self.request_slots.release()
+            self.shutdown_request(request)
+            self.handle_error(request, client_address)
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self.request_slots.release()
 
 
 def prepare_socket_path():
@@ -196,8 +266,6 @@ def prepare_socket_path():
 
 
 def main():
-    import grp
-
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     config = read_config()
     key = read_key()

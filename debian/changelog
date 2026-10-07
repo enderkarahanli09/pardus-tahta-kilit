@@ -1,3 +1,10 @@
+tahta-kilit (0.1.1) unstable; urgency=medium
+
+  * Harden local verifier key-file checks, request handling and service sandboxing.
+  * Validate provisioning URLs and improve the Pardus installation guidance.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Wed, 07 Oct 2026 00:00:00 +0300
+
 tahta-kilit (0.1.0) unstable; urgency=medium
 
   * Initial offline ETAP lock-screen prototype.

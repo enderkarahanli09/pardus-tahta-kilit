@@ -11,6 +11,11 @@ UNLOCK_CODE_LENGTH = 8
 UNLOCK_CODE_SPACE = 100_000_000
 
 
+def _validate_key(key):
+    if not isinstance(key, bytes) or len(key) != 32:
+        raise ValueError("Tahta anahtarı tam olarak 32 bayt olmalıdır.")
+
+
 def _validate_board_id(board_id):
     if not isinstance(board_id, str) or not BOARD_ID_PATTERN.fullmatch(board_id):
         raise ValueError("Tahta kimliği biçimi geçersiz.")
@@ -27,6 +32,7 @@ def _b64url_no_padding(value):
 
 def qr_signature(key, board_id, nonce):
     """QR imzasını Base64URL biçiminde döndürür."""
+    _validate_key(key)
     _validate_board_id(board_id)
     _validate_nonce(nonce)
     message = "qr:v1|{}|{}".format(board_id, nonce).encode("ascii")
@@ -36,6 +42,7 @@ def qr_signature(key, board_id, nonce):
 
 def unlock_code(key, board_id, nonce):
     """HMAC'in ilk 8 baytını büyük endian okuyup 8 haneli koda indirger."""
+    _validate_key(key)
     _validate_board_id(board_id)
     _validate_nonce(nonce)
     message = "unlock:v1|{}|{}".format(board_id, nonce).encode("ascii")

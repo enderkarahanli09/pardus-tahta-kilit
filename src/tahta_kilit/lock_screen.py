@@ -349,6 +349,9 @@ class LockScreen:
         self.refresh_challenge()
 
     def on_delete(self, _window, _event):
+        if TEST_MODE:
+            Gtk.main_quit()
+            return False
         return True
 
     def on_key_press(self, _window, event):

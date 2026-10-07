@@ -13,10 +13,24 @@ ExecStart=/usr/bin/python3 -m tahta_kilit.verifier_service
 Restart=on-failure
 RestartSec=2
 NoNewPrivileges=true
+CapabilityBoundingSet=CAP_CHOWN
+AmbientCapabilities=
 ProtectSystem=strict
 ReadWritePaths=/run/tahta-kilit
 ProtectHome=true
 PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+TasksMax=16
+MemoryMax=128M
 
 [Install]
 WantedBy=multi-user.target

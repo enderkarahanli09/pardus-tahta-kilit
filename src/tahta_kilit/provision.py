@@ -5,6 +5,7 @@ import grp
 import json
 import os
 import secrets
+import stat
 import subprocess
 import tempfile
 from urllib.parse import urlsplit
@@ -47,7 +48,22 @@ def main():
     if not BOARD_ID_PATTERN.fullmatch(args.board_id):
         parser.error("Tahta kimliği A-Z, 0-9 ve tire karakterlerinden oluşmalıdır.")
     parts = urlsplit(args.site_url)
-    if parts.scheme != "https" or not parts.netloc or parts.query or parts.fragment:
+    try:
+        port = parts.port
+    except ValueError:
+        parser.error("--site-url içindeki bağlantı noktası geçersizdir.")
+    if (
+        args.site_url != args.site_url.strip()
+        or any(ord(character) < 0x21 or ord(character) == 0x7F for character in args.site_url)
+        or parts.scheme != "https"
+        or not parts.hostname
+        or port not in (None, 443)
+        or parts.username
+        or parts.password
+        or parts.path not in ("", "/", "/ac")
+        or parts.query
+        or parts.fragment
+    ):
         parser.error("--site-url HTTPS olmalı ve query/fragment içermemelidir.")
 
     if os.path.lexists(KEY_PATH) or os.path.lexists(CONFIG_PATH):
@@ -56,8 +72,18 @@ def main():
             "üzerine yazılmadı; yöneticiyle anahtar yenileme prosedürünü uygulayın."
         )
 
-    os.makedirs(CONFIG_DIR, mode=0o750, exist_ok=True)
     group_id = grp.getgrnam("tahta-kilit").gr_gid
+    try:
+        os.mkdir(CONFIG_DIR, mode=0o750)
+    except FileExistsError:
+        pass
+    directory_info = os.lstat(CONFIG_DIR)
+    if (
+        not stat.S_ISDIR(directory_info.st_mode)
+        or directory_info.st_uid != 0
+        or stat.S_IMODE(directory_info.st_mode) & 0o022
+    ):
+        raise PermissionError("Tahta ayar dizini root tarafından korunmalıdır.")
     os.chown(CONFIG_DIR, 0, group_id)
     os.chmod(CONFIG_DIR, 0o750)
     config = json.dumps(
