@@ -1,3 +1,11 @@
+tahta-kilit (0.1.4) unstable; urgency=medium
+
+  * Grab keyboard input while locked and release it before hiding the window.
+  * Request compositor shortcut inhibition on supported GTK Wayland backends.
+  * Report keyboard protection state and retry interrupted keyboard grabs.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 12:00:00 +0300
+
 tahta-kilit (0.1.3) unstable; urgency=medium
 
   * Keep the lock window hidden after successful verification until session restart.

@@ -49,6 +49,16 @@ Pardus Tahta Kilidi, ETAP akıllı tahtada oturum açıldığında açılan tam 
 
 ## Kolay kurulum
 
+### v0.1.4 — kilitliyken masaüstü kısayolları
+
+Alt+F1 gibi masaüstü kısayolları GTK pencere olayından önce pencere yöneticisi tarafından yakalanabilir. v0.1.4, kilit penceresi ekrana gelince `Gdk.Seat.grab` ile yalnız klavye girişini bu pencereye yönlendirir; fare ve dokunmatik girişi yakalamaz. Yakalama kesilirse tekrar denenir. Doğru kod sonrası klavye, pencere gizlenmeden önce serbest bırakılır; öğretmenin normal klavye kullanımı geri gelir. Masaüstü kısayol ayarları kalıcı olarak değiştirilmez.
+
+Ekranda **Klavye kilit penceresine yönlendirildi (X11)** veya **Wayland: kısayol kısıtlaması istendi** durumu gösterilir. Yakalama başarısız/desteksiz olduğunda uyarı görünür; güvenli kiosk kurulumu yapılmış gibi davranılmaz. Wayland'da GTK'nin toplevel klavye yakalaması, compositor'a shortcut-inhibit isteği gönderir; compositor/user reddedebilir veya protokolü desteklemeyebilir. Başarılı API dönüşü Wayland sistem kısayollarının engellendiğini kanıtlamaz. Yönetici masaüstünün çıkardığı izin isteğini değerlendirmeli ve kilit açıkken Alt+F1, Super, Alt+Tab gibi kısayolları gerçek cihazda sınamalıdır.
+
+Bu uygulama işletim sistemi/kiosk politikasının yerini almaz. Ctrl+Alt+F1…F6 TTY, güç/yeniden başlatma ve diğer sistem düzeyi davranışlar ayrıca kısıtlanmalıdır. Windows/WSLg'de geçen testler gerçek Pardus masaüstü kısayolları için kanıt değildir. GTK kaynakları: [Seat.grab](https://docs.gtk.org/gdk3/method.Seat.grab.html), [GTK 3 Wayland shortcut inhibition](https://mail.gnome.org/archives/commits-list/2017-November/msg06814.html).
+
+Yeni `tahta-kilit_0.1.4_all.deb` paketini mevcut kurulumun üzerine yükleyin, ardından oturumu kapatıp açın. Anahtar ve Vercel eşlemesi korunur; yeniden kurulum sihirbazı çalıştırmak gerekmez. v0.1.3'teki oturum boyunca gizli kalma davranışı devam eder. `tests/test_keyboard_guard.py`, `tests/test_session_unlock.py` ve geçici `tests/keyboard_native_smoke.py` bu yaşam döngüsünü kontrol eder; sonuncusu kısa bir test penceresi açar.
+
 ### Mevcut kurulumun üzerine güncelleme — v0.1.3
 
 `tahta-kilit_0.1.3_all.deb` paketini indirip Pardus paket yöneticisinde çift tıklayarak mevcut `tahta-kilit` kurulumunun üzerine yükleyin. Paket adı değişmez; `0.1.3`, `0.1.2` sürümünden yenidir. Mevcut `/etc/tahta-kilit/board.key`, `config.json`, kullanıcı grubu ve Vercel anahtar eşlemesi korunur. Yeniden anahtar üretmeyin, kurulum sihirbazını tekrar tamamlamak veya `.sh` çalıştırmak gerekmez.

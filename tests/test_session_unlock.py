@@ -21,6 +21,9 @@ class SessionUnlockTests(unittest.TestCase):
         screen.refresh_timer = 11
         screen.tick_timer = 12
         screen.set_status = Mock()
+        screen.keyboard_guard = Mock()
+        screen.keyboard_label = Mock()
+        screen.keyboard_timer = None
         return screen
 
     def test_valid_code_consumes_nonce_and_hides_until_next_instance(self):
@@ -29,10 +32,15 @@ class SessionUnlockTests(unittest.TestCase):
         screen = self.screen()
         screen.challenge = challenge
         screen.code = unlock_code(b"k" * 32, "ETAP-DEMO", challenge["nonce"])
+        order = Mock()
+        order.attach_mock(screen.keyboard_guard.release, "release")
+        order.attach_mock(screen.window.hide, "hide")
         with patch.object(lock_screen, "call_verifier", side_effect=lambda request: verifier.verify(request["nonce"], request["unlockCode"])) as call, patch.object(lock_screen.GLib, "source_remove") as remove:
             screen.submit_code()
             self.assertTrue(screen.unlocked)
             screen.window.hide.assert_called_once_with()
+            screen.keyboard_guard.release.assert_called_once_with()
+            self.assertEqual([call[0] for call in order.mock_calls], ["release", "hide"])
             self.assertEqual(screen.code, "")
             self.assertIsNone(screen.challenge)
             self.assertIsNone(screen.refresh_timer)

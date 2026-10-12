@@ -11,6 +11,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from tahta_kilit.keyboard_guard import KeyboardGuard
 
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
@@ -88,6 +89,7 @@ class LockScreen:
         self.seconds_left = 0
 
         self.window = Gtk.Window(title="Tahta Kilidi")
+        self.keyboard_guard = KeyboardGuard(self.window)
         self.window.set_decorated(False)
         self.window.set_keep_above(True)
         self.window.set_skip_taskbar_hint(True)
@@ -96,13 +98,19 @@ class LockScreen:
         self.window.fullscreen()
         self.window.connect("delete-event", self.on_delete)
         self.window.connect("key-press-event", self.on_key_press)
+        self.window.connect("key-release-event", lambda _window, _event: True)
+        self.window.add_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK)
         self.window.connect("window-state-event", self.on_window_state)
+        self.window.connect("map-event", self.on_map)
+        self.window.connect("grab-broken-event", self.on_grab_broken)
+        self.window.connect("destroy", self.on_destroy)
 
         self.apply_css()
         self.build_view()
         self.refresh_challenge()
         self.refresh_timer = GLib.timeout_add_seconds(5, self.refresh_challenge)
         self.tick_timer = GLib.timeout_add_seconds(1, self.tick)
+        self.keyboard_timer = GLib.timeout_add_seconds(2, self.ensure_keyboard_guard)
 
     def apply_css(self):
         css = """
@@ -203,6 +211,11 @@ class LockScreen:
         keypad_column.pack_start(self.status_label, False, False, 0)
         content.pack_start(keypad_column, False, False, 0)
 
+        self.keyboard_label = Gtk.Label(label="Klavyenin kilit penceresine yönlendirilmesi bekleniyor…")
+        self.keyboard_label.set_line_wrap(True)
+        self.keyboard_label.set_max_width_chars(36)
+        self.keyboard_label.get_style_context().add_class("status")
+        keypad_column.pack_start(self.keyboard_label, False, False, 0)
         self.window.add(root)
         self.window.show_all()
 
@@ -339,15 +352,51 @@ class LockScreen:
         self.challenge = None
         self.update_code_display()
         self.qr_image.clear()
-        for name in ("refresh_timer", "tick_timer"):
+        for name in ("refresh_timer", "tick_timer", "keyboard_timer"):
             source = getattr(self, name, None)
             if source is not None:
                 GLib.source_remove(source)
                 setattr(self, name, None)
+        self.keyboard_guard.release()
         self.window.hide()
+
+    def ensure_keyboard_guard(self):
+        if self.unlocked:
+            self.keyboard_timer = None
+            return False
+        state = self.keyboard_guard.acquire()
+        messages = {
+            "pending": "Klavyenin kilit penceresine yönlendirilmesi bekleniyor…",
+            "active_x11": "Klavye kilit penceresine yönlendirildi (X11).",
+            "requested_wayland": "Wayland: kısayol kısıtlaması istendi. Masaüstü onayı gerekebilir.",
+            "failed": "Klavye koruması kurulamadı. Yönetici kiosk/kısayol ayarlarını kontrol etsin.",
+            "unsupported": "Oturum klavye korumasını desteklemiyor. Yönetici kiosk oturumunu yapılandırsın.",
+        }
+        self.keyboard_label.set_text(messages.get(state, messages["failed"]))
+        return True
+
+    def on_map(self, _window, _event):
+        if not self.unlocked:
+            self.ensure_keyboard_guard()
+        return False
+
+    def on_grab_broken(self, _window, event):
+        if event.keyboard and not self.unlocked:
+            self.keyboard_guard.broken()
+            GLib.idle_add(self.retry_keyboard_guard)
+        return False
+
+    def retry_keyboard_guard(self):
+        if not self.unlocked:
+            self.ensure_keyboard_guard()
+        return False
+
+    def on_destroy(self, _window):
+        self.keyboard_guard.release()
 
     def on_delete(self, _window, _event):
         if TEST_MODE:
+            self.keyboard_guard.release()
             Gtk.main_quit()
             return False
         return True
@@ -383,6 +432,7 @@ class LockScreen:
             self.window.show_all()
             self.window.fullscreen()
             self.window.present()
+            self.ensure_keyboard_guard()
         return False
 
 
