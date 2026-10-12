@@ -7,5 +7,7 @@ if [ ! -r /etc/tahta-kilit/config.json ]; then
 fi
 
 # Masaüstü oturumunun ekran değişkenlerini kullanıcı systemd yöneticisine aktar.
+systemctl --user daemon-reload
 systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS || true
-systemctl --user start tahta-kilit-ui.service
+# Linger/başka oturum nedeniyle eski gizli süreç yaşıyor olsa bile her yeni giriş kilitlidir.
+systemctl --user restart tahta-kilit-ui.service

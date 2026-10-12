@@ -19,7 +19,6 @@ KEY_PATH = "/etc/tahta-kilit/board.key"
 SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
 SOCKET_GROUP = "tahta-kilit"
 CHALLENGE_TTL_SECONDS = 120
-UNLOCK_SECONDS = 40 * 60
 MAX_BAD_CODES_PER_CHALLENGE = 5
 MAX_BAD_CODES_PER_TEN_MINUTES = 10
 MAX_REQUEST_BYTES = 4096
@@ -169,7 +168,7 @@ class Verifier:
                 self.challenge = None
                 self.bad_codes_for_challenge = 0
                 self.recent_failures.clear()
-                return {"ok": True, "unlockSeconds": UNLOCK_SECONDS}
+                return {"ok": True, "unlockMode": "session"}
 
             self.bad_codes_for_challenge += 1
             self.recent_failures.append(now)

@@ -37,7 +37,7 @@ Pardus Tahta Kilidi, ETAP akıllı tahtada oturum açıldığında açılan tam 
 5. Öğretmen Excel listesindeki **6 haneli Öğretmen Kodu** değerini girer. Altıncı rakamdan sonra web uygulaması otomatik doğrulama isteği yapar.
 6. Web sitesi öğretmen kodunu ve QR imzasını doğrular; 8 haneli açma kodunu gösterir.
 7. Öğretmen kodu tahtanın dokunmatik sayı tuş takımına girer. Tahta kodu internet kullanmadan aynı anahtarla tekrar hesaplar.
-8. Doğru, güncel ve kullanılmamış kodda kilit ekranı 40 dakika gizlenir; sonra tekrar görünür. Servis veya tahta yeniden başlarsa başlangıç durumu kilitlidir.
+8. Doğru, güncel ve kullanılmamış kodda kilit ekranı mevcut oturum boyunca tamamen gizlenir. Zamanlayıcıyla yeniden kilitleme yoktur. Sonraki Pardus oturum girişinde kilit yeniden başlar. Arayüz çöker veya yönetici tarafından yeniden başlatılırsa güvenlik için kilitli başlar.
 
 ### Bileşenler
 
@@ -49,9 +49,17 @@ Pardus Tahta Kilidi, ETAP akıllı tahtada oturum açıldığında açılan tam 
 
 ## Kolay kurulum
 
+### Mevcut kurulumun üzerine güncelleme — v0.1.3
+
+`tahta-kilit_0.1.3_all.deb` paketini indirip Pardus paket yöneticisinde çift tıklayarak mevcut `tahta-kilit` kurulumunun üzerine yükleyin. Paket adı değişmez; `0.1.3`, `0.1.2` sürümünden yenidir. Mevcut `/etc/tahta-kilit/board.key`, `config.json`, kullanıcı grubu ve Vercel anahtar eşlemesi korunur. Yeniden anahtar üretmeyin, kurulum sihirbazını tekrar tamamlamak veya `.sh` çalıştırmak gerekmez.
+
+Güncelleme çalışan doğrulama servisini yeniler. Açık olan GTK arayüzü mevcut süreçte eski sürümle devam edebileceğinden güncellemeden sonra oturumu bir kez kapatıp açın. Yeni girişte kullanıcı servis tanımları yeniden yüklenir ve yeni kilit süreci başlar. Kiosk oturumunun yönetici tarafından durdurulma/kısayol ayarları ayrıca korunmalıdır; paket kiosk yapılandırmasını kendiliğinden oluşturmaz.
+
+v0.1.3'te başarılı açma sonrası pencere, görev çubuğu ve pencere değiştirici görünürlüğü kaldırılır; QR yenileme ve sayaç zamanlayıcıları durur. GTK süreci arka planda kalır; normal açma işlemi süreci sonlandırmadığından `Restart=always` kilidi geri açmaz. Açma durumu yalnız o süreç belleğindedir; çökme, yönetici servis yeniden başlatması veya cihaz yeniden başlatması kilitli başlangıç yapar. Kullanıcı servis yöneticisi linger nedeniyle açık kalsa bile sonraki grafik oturum girişi yeni kilit sürecini başlatır.
+
 ### Terminal kullanmadan kurulum (v0.1.2 ve sonrası)
 
-1. GitHub Releases'den `tahta-kilit_0.1.2_all.deb` dosyasını indirin, Pardus'ta çift tıklayıp paket yöneticisiyle kurun. Ayrı `.sh` dosyası gerekmez.
+1. GitHub Releases'den `tahta-kilit_0.1.3_all.deb` dosyasını indirin, Pardus'ta çift tıklayıp paket yöneticisiyle kurun. Ayrı `.sh` dosyası gerekmez.
 2. Uygulama menüsünden **Tahta Kilidi Kurulum** penceresini açın. Yapılandırılmamış oturumda bir sonraki girişte bu pencere otomatik açılır.
 3. Tahta kimliğini ve öğretmen web adresini girin. **Kurulumu tamamla / mevcut anahtarı al** düğmesine basın. Sistem, yetkili yöneticinin parolasını grafik pencerede ister; terminal açılmaz.
 4. Sihirbaz yerel anahtarı oluşturur, sihirbazı açan standart oturum hesabını `tahta-kilit` grubuna ekler ve doğrulama servisini etkinleştirir. Mevcut yapılandırma ve anahtar varsa korunur; girilen yeni kimlik/adres uygulanmaz, kayıtlı değerler gösterilir.
@@ -77,7 +85,7 @@ Bu yöntem GitHub Releases'den alınan `.deb` ile bu depodaki yardımcı betiği
 Dosyaların olduğu klasörde terminal açın. Paket dosya adını indirdiğiniz sürüme göre yazın:
 
 ```sh
-sudo sh ./install-pardus.sh ./tahta-kilit_0.1.0_all.deb
+sudo sh ./install-pardus.sh ./tahta-kilit_0.1.3_all.deb
 ```
 
 Yardımcı betik şunları yapar:
@@ -130,7 +138,7 @@ Otomatik betik kullanmadan kurmak isteyen sistem yöneticisi:
 
 ```sh
 sudo apt update
-sudo apt install ./tahta-kilit_0.1.0_all.deb
+sudo apt install ./tahta-kilit_0.1.3_all.deb
 sudo python3 -m tahta_kilit.provision --board-id ETAP-01 --site-url https://pardus-tahta-kilit-web.vercel.app/ac
 sudo usermod -aG tahta-kilit "$USER"
 sudo systemctl enable --now tahta-kilit-verifier.service
@@ -157,11 +165,11 @@ Bu bilgi ve anahtarlar tahtaya kurulum sırasında bir kez yazılır. Öğretmen
 - **Başlangıç:** ETAP grafik oturumu kullanıcı girişinden sonra kilit ekranı otomatik başlamalıdır.
 - **QR:** 120 saniye geçerli olacak şekilde yenilenir. Süresi geçmiş QR'dan kod alınsa bile tahta eski nonce'ı kabul etmez. Yeni QR okutun.
 - **Açma kodu:** Öğretmen sayfasında Excel listesindeki 6 haneli öğretmen kodunun son rakamını girdikten sonra otomatik görünür. Tahtaya girilecek ayrı açma kodu 8 hanedir.
-- **Kullanım süresi:** Doğru kod ekranı 40 dakika kapatır; sonra kilit geri gelir.
+- **Kullanım süresi:** Doğru koddan sonra kilit ekranı oturum boyunca gizlidir. 40 dakikalık yeniden kilitleme kaldırılmıştır; sonraki kullanıcı girişinde kilit yeniden açılır.
 - **İnternet kesilmesi:** Tahta QR üretmeye ve yerel doğrulamaya devam eder. Telefon ve web/API erişimi olmadan yeni bir öğretmen açma kodu alınamaz.
 - **Excel güncellemesi:** Öğretmen listesi web sunucusunca okunur. Yönetici panelinde Drive yenileme işlemi yapılır; Pardus paketinin yeniden kurulması gerekmez.
 - **Yanlış kod:** Beş yanlış denemeden sonra tahtada 30 saniye bekleme uygulanır; daha geniş periyotta ek bekleme vardır.
-- **Yeniden başlatma/çökme:** Arayüz yeniden açıldığında kilit ekranına döner; 40 dakikalık açma oturumu yeniden başlatma sonrası korunmaz.
+- **Yeniden başlatma/çökme:** Arayüz yeniden açıldığında kilit ekranına döner; oturumun açık durumu diske kaydedilmez.
 
 ## Windows/WSL üzerinde arayüz testi
 

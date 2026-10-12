@@ -3,16 +3,17 @@
 import json
 import os
 import socket
-import time
 from io import BytesIO
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import qrcode
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
-UNLOCK_SECONDS = 40 * 60
 MAX_CODE_DIGITS = 8
 TEST_MODE = os.environ.get("TAHTA_KILIT_TEST_MODE") == "1"
 
@@ -83,7 +84,7 @@ class LockScreen:
         self.config = load_config()
         self.challenge = None
         self.code = ""
-        self.unlocked_until = None
+        self.unlocked = False
         self.seconds_left = 0
 
         self.window = Gtk.Window(title="Tahta Kilidi")
@@ -100,8 +101,8 @@ class LockScreen:
         self.apply_css()
         self.build_view()
         self.refresh_challenge()
-        GLib.timeout_add_seconds(5, self.refresh_challenge)
-        GLib.timeout_add_seconds(1, self.tick)
+        self.refresh_timer = GLib.timeout_add_seconds(5, self.refresh_challenge)
+        self.tick_timer = GLib.timeout_add_seconds(1, self.tick)
 
     def apply_css(self):
         css = """
@@ -225,8 +226,9 @@ class LockScreen:
         self.status_label.set_text(message)
 
     def refresh_challenge(self):
-        if self.unlocked_until is not None:
-            return True
+        if self.unlocked:
+            self.refresh_timer = None
+            return False
         try:
             response = call_verifier({"action": "challenge"})
             if not response.get("ok"):
@@ -267,11 +269,9 @@ class LockScreen:
             self.set_status("İstek tamamlanamadı. QR kodu yenileyip tekrar deneyin.", is_error=True)
 
     def tick(self):
-        if self.unlocked_until is not None:
-            remaining = int(self.unlocked_until - time.monotonic())
-            if remaining <= 0:
-                self.relock()
-            return True
+        if self.unlocked:
+            self.tick_timer = None
+            return False
         if self.challenge is not None:
             self.seconds_left = max(0, self.seconds_left - 1)
             self.qr_countdown.set_text(
@@ -282,7 +282,7 @@ class LockScreen:
         return True
 
     def add_digit(self, digit):
-        if self.unlocked_until is not None or len(self.code) >= MAX_CODE_DIGITS:
+        if self.unlocked or len(self.code) >= MAX_CODE_DIGITS:
             return
         self.code += digit
         self.update_code_display()
@@ -303,7 +303,7 @@ class LockScreen:
         )
 
     def submit_code(self):
-        if self.challenge is None or len(self.code) != MAX_CODE_DIGITS:
+        if self.unlocked or self.challenge is None or len(self.code) != MAX_CODE_DIGITS:
             return
         try:
             response = call_verifier(
@@ -330,23 +330,21 @@ class LockScreen:
                 self.confirm_button.set_sensitive(False)
             return
 
-        duration = response.get("unlockSeconds", UNLOCK_SECONDS)
-        if not isinstance(duration, int) or duration < 1 or duration > UNLOCK_SECONDS:
-            duration = UNLOCK_SECONDS
-        self.code = ""
-        self.challenge = None
-        self.unlocked_until = time.monotonic() + duration
-        self.window.hide()
+        self.unlock_session()
 
-    def relock(self):
-        self.unlocked_until = None
+    def unlock_session(self):
+        # GTK döngüsü canlı kalır; systemd başarılı açmayı çökme sanıp yeniden başlatmaz.
+        self.unlocked = True
         self.code = ""
-        self.update_code_display()
         self.challenge = None
-        self.window.show_all()
-        self.window.fullscreen()
-        self.window.present()
-        self.refresh_challenge()
+        self.update_code_display()
+        self.qr_image.clear()
+        for name in ("refresh_timer", "tick_timer"):
+            source = getattr(self, name, None)
+            if source is not None:
+                GLib.source_remove(source)
+                setattr(self, name, None)
+        self.window.hide()
 
     def on_delete(self, _window, _event):
         if TEST_MODE:
@@ -376,12 +374,12 @@ class LockScreen:
         return True
 
     def on_window_state(self, _window, event):
-        if self.unlocked_until is None and event.new_window_state & Gdk.WindowState.ICONIFIED:
+        if not self.unlocked and event.new_window_state & Gdk.WindowState.ICONIFIED:
             GLib.idle_add(self.restore_lock_window)
         return False
 
     def restore_lock_window(self):
-        if self.unlocked_until is None:
+        if not self.unlocked:
             self.window.show_all()
             self.window.fullscreen()
             self.window.present()
