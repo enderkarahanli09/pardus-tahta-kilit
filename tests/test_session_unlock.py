@@ -12,7 +12,7 @@ class SessionUnlockTests(unittest.TestCase):
     def screen(self):
         screen = lock_screen.LockScreen.__new__(lock_screen.LockScreen)
         screen.unlocked = False
-        screen.code = "12345678"
+        screen.code = "123456"
         screen.challenge = {"nonce": "a" * 32}
         screen.window = Mock()
         screen.qr_image = Mock()
@@ -21,7 +21,6 @@ class SessionUnlockTests(unittest.TestCase):
         screen.refresh_timer = 11
         screen.tick_timer = 12
         screen.set_status = Mock()
-        screen.keyboard_guard = Mock()
         screen.keyboard_label = Mock()
         screen.keyboard_timer = None
         return screen
@@ -33,14 +32,12 @@ class SessionUnlockTests(unittest.TestCase):
         screen.challenge = challenge
         screen.code = unlock_code(b"k" * 32, "ETAP-DEMO", challenge["nonce"])
         order = Mock()
-        order.attach_mock(screen.keyboard_guard.release, "release")
         order.attach_mock(screen.window.hide, "hide")
         with patch.object(lock_screen, "call_verifier", side_effect=lambda request: verifier.verify(request["nonce"], request["unlockCode"])) as call, patch.object(lock_screen.GLib, "source_remove") as remove:
             screen.submit_code()
             self.assertTrue(screen.unlocked)
             screen.window.hide.assert_called_once_with()
-            screen.keyboard_guard.release.assert_called_once_with()
-            self.assertEqual([call[0] for call in order.mock_calls], ["release", "hide"])
+            self.assertEqual([call[0] for call in order.mock_calls], ["hide"])
             self.assertEqual(screen.code, "")
             self.assertIsNone(screen.challenge)
             self.assertIsNone(screen.refresh_timer)
@@ -55,7 +52,7 @@ class SessionUnlockTests(unittest.TestCase):
             screen.window.present.assert_not_called()
             call.assert_called_once()
         with self.assertRaises(ServiceError):
-            verifier.verify(challenge["nonce"], "12345678")
+            verifier.verify(challenge["nonce"], "123456")
         next_instance = self.screen()
         self.assertFalse(next_instance.unlocked)
         next_instance.restore_lock_window()

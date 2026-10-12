@@ -1,4 +1,4 @@
-"""Dokunmatik GTK 3 kilit ekranı; fiziksel klavyeden kod almaz."""
+"""BB Kilit normal GTK penceresi; klavye ve dokunmatik kod girişi."""
 
 import json
 import os
@@ -11,11 +11,10 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
-from tahta_kilit.keyboard_guard import KeyboardGuard
 
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
-MAX_CODE_DIGITS = 8
+MAX_CODE_DIGITS = 6
 TEST_MODE = os.environ.get("TAHTA_KILIT_TEST_MODE") == "1"
 
 COLORS = {
@@ -61,6 +60,7 @@ def build_qr_url(site_url, challenge):
     parts = urlsplit(site_url)
     query = urlencode(
         {
+            "v": "2",
             "board": challenge["boardId"],
             "nonce": challenge["nonce"],
             "sig": challenge["qrSignature"],
@@ -88,29 +88,18 @@ class LockScreen:
         self.unlocked = False
         self.seconds_left = 0
 
-        self.window = Gtk.Window(title="Tahta Kilidi")
-        self.keyboard_guard = KeyboardGuard(self.window)
-        self.window.set_decorated(False)
-        self.window.set_keep_above(True)
-        self.window.set_skip_taskbar_hint(True)
-        self.window.set_skip_pager_hint(True)
+        self.window = Gtk.Window(title="BB Kilit")
+        self.window.set_default_size(860, 650)
         self.window.set_position(Gtk.WindowPosition.CENTER)
-        self.window.fullscreen()
         self.window.connect("delete-event", self.on_delete)
         self.window.connect("key-press-event", self.on_key_press)
-        self.window.connect("key-release-event", lambda _window, _event: True)
-        self.window.add_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.KEY_RELEASE_MASK)
-        self.window.connect("window-state-event", self.on_window_state)
-        self.window.connect("map-event", self.on_map)
-        self.window.connect("grab-broken-event", self.on_grab_broken)
-        self.window.connect("destroy", self.on_destroy)
-
+        self.window.connect("destroy", lambda _window: Gtk.main_quit())
         self.apply_css()
         self.build_view()
         self.refresh_challenge()
         self.refresh_timer = GLib.timeout_add_seconds(5, self.refresh_challenge)
         self.tick_timer = GLib.timeout_add_seconds(1, self.tick)
-        self.keyboard_timer = GLib.timeout_add_seconds(2, self.ensure_keyboard_guard)
+        self.keyboard_timer = None
 
     def apply_css(self):
         css = """
@@ -143,12 +132,12 @@ class LockScreen:
         root.set_valign(Gtk.Align.CENTER)
         root.get_style_context().add_class("screen")
 
-        title = Gtk.Label(label="Akıllı Tahta Kilitli")
+        title = Gtk.Label(label="BB Kilit — QR ile giriş")
         title.get_style_context().add_class("title")
         root.pack_start(title, False, False, 0)
 
         subtitle = Gtk.Label(
-            label="Öğretmen: QR kodu telefonunuzla okutun ve açma kodunu alın."
+            label="QR kodu telefonunuzla okutun ve 6 haneli açma kodunu alın."
         )
         subtitle.get_style_context().add_class("subtitle")
         root.pack_start(subtitle, False, False, 0)
@@ -174,10 +163,10 @@ class LockScreen:
         keypad_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         keypad_column.set_halign(Gtk.Align.CENTER)
         keypad_column.set_valign(Gtk.Align.CENTER)
-        code_caption = Gtk.Label(label="8 haneli kod")
+        code_caption = Gtk.Label(label="6 haneli kod")
         code_caption.get_style_context().add_class("subtitle")
         keypad_column.pack_start(code_caption, False, False, 0)
-        self.code_label = Gtk.Label(label="○○○○○○○○")
+        self.code_label = Gtk.Label(label="○○○○○○")
         self.code_label.get_style_context().add_class("code")
         keypad_column.pack_start(self.code_label, False, False, 2)
 
@@ -211,7 +200,7 @@ class LockScreen:
         keypad_column.pack_start(self.status_label, False, False, 0)
         content.pack_start(keypad_column, False, False, 0)
 
-        self.keyboard_label = Gtk.Label(label="Klavyenin kilit penceresine yönlendirilmesi bekleniyor…")
+        self.keyboard_label = Gtk.Label(label="Kodu klavyeden veya dokunmatik tuş takımından girebilirsiniz.")
         self.keyboard_label.set_line_wrap(True)
         self.keyboard_label.set_max_width_chars(36)
         self.keyboard_label.get_style_context().add_class("status")
@@ -357,89 +346,34 @@ class LockScreen:
             if source is not None:
                 GLib.source_remove(source)
                 setattr(self, name, None)
-        self.keyboard_guard.release()
         self.window.hide()
 
-    def ensure_keyboard_guard(self):
-        if self.unlocked:
-            self.keyboard_timer = None
-            return False
-        state = self.keyboard_guard.acquire()
-        messages = {
-            "pending": "Klavyenin kilit penceresine yönlendirilmesi bekleniyor…",
-            "active_x11": "Klavye kilit penceresine yönlendirildi (X11).",
-            "requested_wayland": "Wayland: kısayol kısıtlaması istendi. Masaüstü onayı gerekebilir.",
-            "failed": "Klavye koruması kurulamadı. Yönetici kiosk/kısayol ayarlarını kontrol etsin.",
-            "unsupported": "Oturum klavye korumasını desteklemiyor. Yönetici kiosk oturumunu yapılandırsın.",
-        }
-        self.keyboard_label.set_text(messages.get(state, messages["failed"]))
-        return True
-
-    def on_map(self, _window, _event):
-        if not self.unlocked:
-            self.ensure_keyboard_guard()
-        return False
-
-    def on_grab_broken(self, _window, event):
-        if event.keyboard and not self.unlocked:
-            self.keyboard_guard.broken()
-            GLib.idle_add(self.retry_keyboard_guard)
-        return False
-
-    def retry_keyboard_guard(self):
-        if not self.unlocked:
-            self.ensure_keyboard_guard()
-        return False
-
-    def on_destroy(self, _window):
-        self.keyboard_guard.release()
-
     def on_delete(self, _window, _event):
-        if TEST_MODE:
-            self.keyboard_guard.release()
-            Gtk.main_quit()
-            return False
-        return True
+        Gtk.main_quit()
+        return False
 
     def on_key_press(self, _window, event):
-        # Tuş takımı GTK Button'larından gelir; fiziksel klavyeyle giriş yoktur.
-        # Test modunda Alt+F1, yalnızca bu kilit ekranı sürecinden çıkar.
-        if (
-            TEST_MODE
-            and event.keyval == Gdk.KEY_F1
-            and event.state
-            & (
-                Gdk.ModifierType.SHIFT_MASK
-                | Gdk.ModifierType.CONTROL_MASK
-                | Gdk.ModifierType.MOD1_MASK
-                | Gdk.ModifierType.MOD4_MASK
-            )
-            == Gdk.ModifierType.MOD1_MASK
-        ):
-            print("Test modu: Alt+F1 ile kilit ekranı kapatıldı.")
-            self.window.destroy()
-            Gtk.main_quit()
+        key = Gdk.keyval_to_unicode(event.keyval)
+        if key and chr(key) in "0123456789":
+            self.add_digit(chr(key))
             return True
-        return True
-
-    def on_window_state(self, _window, event):
-        if not self.unlocked and event.new_window_state & Gdk.WindowState.ICONIFIED:
-            GLib.idle_add(self.restore_lock_window)
+        if event.keyval == Gdk.KEY_BackSpace:
+            self.backspace()
+            return True
+        if event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            self.submit_code()
+            return True
         return False
 
     def restore_lock_window(self):
         if not self.unlocked:
             self.window.show_all()
-            self.window.fullscreen()
             self.window.present()
-            self.ensure_keyboard_guard()
         return False
 
 
 def main():
     Gtk.init([])
-    if TEST_MODE:
-        print("Test modu açık. Alt+F1 kilit ekranını kapatır.")
     try:
         screen = LockScreen()
         Gtk.main()

@@ -1,3 +1,11 @@
+tahta-kilit (0.1.7) unstable; urgency=medium
+
+  * Use version 2 QR challenges and six-digit unlock codes.
+  * Open BB Kilit as a normal window only from its launcher.
+  * Remove graphical-session autostart and keyboard capture.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 14:00:00 +0300
+
 tahta-kilit (0.1.6) unstable; urgency=medium
 
   * Add administrator-authorized immutable desktop launcher protection.

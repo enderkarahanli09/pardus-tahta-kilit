@@ -1,11 +1,11 @@
 [Unit]
-Description=Pardus ETAP dokunmatik tahta kilit ekranı
+Description=BB Kilit QR ve altı haneli kod giriş penceresi
 After=graphical-session.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3 -m tahta_kilit.lock_screen
-Restart=always
+Restart=on-failure
 RestartSec=2
 NoNewPrivileges=true
 UnsetEnvironment=TAHTA_KILIT_TEST_MODE
@@ -13,6 +13,3 @@ ProtectSystem=full
 RestrictAddressFamilies=AF_UNIX
 RestrictSUIDSGID=true
 LockPersonality=true
-
-[Install]
-WantedBy=default.target

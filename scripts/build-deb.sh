@@ -18,7 +18,6 @@ mkdir -p \
     "$CONTROL_DIR" \
     "$PACKAGE_ROOT/usr/lib/python3/dist-packages/tahta_kilit" \
     "$PACKAGE_ROOT/usr/lib/tahta-kilit" \
-    "$PACKAGE_ROOT/etc/xdg/autostart" \
     "$PACKAGE_ROOT/usr/share/applications" \
     "$PACKAGE_ROOT/usr/share/polkit-1/actions" \
     "$PACKAGE_ROOT/lib/systemd/system" \
@@ -31,8 +30,6 @@ install -m 0644 "$PROJECT_DIR/share/tahta-kilit-verifier.service" \
     "$PACKAGE_ROOT/lib/systemd/system/tahta-kilit-verifier.service"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-ui.service" \
     "$PACKAGE_ROOT/lib/systemd/user/tahta-kilit-ui.service"
-install -m 0644 "$PROJECT_DIR/share/tahta-kilit.desktop" \
-    "$PACKAGE_ROOT/etc/xdg/autostart/tahta-kilit.desktop"
 sed 's/\r$//' "$PROJECT_DIR/share/start-ui.sh" > \
     "$PACKAGE_ROOT/usr/lib/tahta-kilit/start-ui.sh"
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/start-ui.sh"
@@ -50,8 +47,8 @@ Priority: optional
 Architecture: all
 Depends: adduser, passwd, systemd, pkexec, policykit-1-gnome | polkit-kde-agent-1, python3, python3-gi, gir1.2-gtk-3.0, python3-qrcode, python3-pil, xdg-user-dirs
 Maintainer: enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>
-Description: Pardus ETAP offline smartboard lock screen
- Python GTK 3 lock screen and local Unix socket verifier for teacher unlock codes.
+Description: BB Kilit offline QR code application
+  Python GTK 3 normal window and local verifier for six-digit QR unlock codes.
 EOF
 
 for maintainer_script in postinst prerm; do

@@ -140,6 +140,7 @@ class Verifier:
             )
             return {
                 "ok": True,
+                "version": 2,
                 "boardId": self.board_id,
                 "nonce": self.challenge["nonce"],
                 "qrSignature": qr_signature(

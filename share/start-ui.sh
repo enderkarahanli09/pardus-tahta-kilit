@@ -12,5 +12,7 @@ fi
 # Masaüstü oturumunun ekran değişkenlerini kullanıcı systemd yöneticisine aktar.
 systemctl --user daemon-reload
 systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS || true
-# Linger/başka oturum nedeniyle eski gizli süreç yaşıyor olsa bile her yeni giriş kilitlidir.
+# Eski sürümde elle etkinleştirilmiş otomatik kullanıcı servisini kaldır.
+systemctl --user disable tahta-kilit-ui.service 2>/dev/null || true
+# BB Kilit'e tıklanınca mevcut süreç yerine tek normal pencere aç.
 systemctl --user restart tahta-kilit-ui.service

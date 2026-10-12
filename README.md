@@ -1,323 +1,53 @@
-# Pardus Tahta Kilidi — ETAP masaüstü uygulaması
+# BB Kilit — Pardus 0.1.7
 
-Pardus Tahta Kilidi, ETAP akıllı tahtada oturum açıldığında açılan tam ekran bir öğretmen kilit ekranı ve yerel kod doğrulama servisidir. QR kodunu tahta kendi üzerinde ve internet olmadan üretir. Öğretmen telefonundan web sayfasını açıp Excel listesindeki 6 haneli öğretmen kodunu girer; web uygulaması QR'a özel 8 haneli açma kodunu verir. Tahta kodu kendi anahtarıyla yerelde doğrular.
+## Kullanım
 
-> Bu depo Pardus uygulamasını içerir. Öğretmen web uygulaması ayrı depoda geliştirilir: [pardus-tahta-kilit-web](https://github.com/enderkarahanli09/pardus-tahta-kilit-web). Pardus'ta `.exe` kullanılmaz; dağıtım biçimi Debian `.deb` paketidir.
+BB Kilit normal, kapatılabilir bir **Python 3 + GTK 3 (PyGObject)** penceresidir. Yalnız masaüstündeki veya uygulama menüsündeki **BB Kilit** başlatıcısına tıklayınca açılır. Oturum başlangıcında kendiliğinden açılmaz; tam ekranı veya fiziksel klavyeyi/kısayolları engellemez.
 
-## İçindekiler
+1. BB Kilit'i açın.
+2. QR'ı telefondan okutun. Site doğrudan 6 haneli kod verir; öğretmen parolası/girişi yoktur.
+3. Kodu klavyeden veya dokunmatik tuş takımından girin ve **Tahtayı Aç** düğmesine/Enter'a basın.
+4. Doğru kod nonce'ı tüketir ve pencereyi gizler. BB Kilit'e tekrar tıklayınca yeni pencere/QR açılır. 40 dakika sonra kendiliğinden geri gelmez.
 
-- [Önemli çalışma sınırları](#önemli-çalışma-sınırları)
-- [Mimari ve kullanım akışı](#mimari-ve-kullanım-akışı)
-- [Kolay kurulum](#kolay-kurulum)
-- [Kurulumdan sonra web sunucusunu eşleştirme](#kurulumdan-sonra-web-sunucusunu-eşleştirme)
-- [Elle kurulum](#elle-kurulum)
-- [Tahta başlatma ve günlük kullanım](#tahta-başlatma-ve-günlük-kullanım)
-- [Windows/WSL üzerinde arayüz testi](#windowswsl-üzerinde-arayüz-testi)
-- [Güvenlik ve öğrenci oturumu](#güvenlik-ve-öğrenci-oturumu)
-- [Sorun giderme](#sorun-giderme)
-- [Kaldırma ve anahtar saklama](#kaldırma-ve-anahtar-saklama)
-- [Geliştirme ve paket oluşturma](#geliştirme-ve-paket-oluşturma)
-- [Kaynak kod haritası](#kaynak-kod-haritası)
+QR'ı gören herkes kod alabilir. Bu uygulama artık öğrenciyi işletim sistemi düzeyinde kısıtlayan kiosk/ekran kilidi değildir.
 
-## Önemli çalışma sınırları
+## Mevcut kurulum üzerine güncelleme
 
-- İlk uyumluluk hedefi **64 bit Pardus ETAP 23.4**. Kurmadan önce pilot tahtanın ETAP/Pardus sürümünü, ekran çözünürlüğünü ve grafik oturum türünü doğrulayın.
-- Tahta tarafı QR üretimi ve kod doğrulaması **çevrimdışı** çalışır. Öğretmenin telefonu ile web API'si, öğretmen kodunu kontrol etmek için internete bağlı olmalıdır. İnternet/Web yoksa yeni kod alınamaz; tahta kilitli kalır.
-- Tahta anahtarı web sunucusunda ve tahtada aynı olmalıdır. Her tahtanın farklı kimliği ve anahtarı olmalıdır.
-- Öğretmen kodları ve çalışma kitabı Pardus'a indirilmez. Dosya ve öğretmen listesi web uygulamasında kalır; kod değişince Pardus paketini tekrar kurmak gerekmez.
-- Uygulama ekranı tek başına işletim sistemi güvenlik kilidi değildir. Öğrenci oturumunu kısıtlama ve BIOS/UEFI ayarları ayrıca yapılmalıdır.
-- Bu depo prototip düzeyindedir. Gerçek ETAP cihazında kısayol, oturum açılışı, dokunmatik kullanım ve kurtarma testleri tamamlanmadan üretim güvenliği varmış gibi değerlendirmeyin.
+GitHub Releases'ten `tahta-kilit_0.1.7_all.deb` indirin ve Pardus paket yöneticisinde çift tıklayıp üzerine kurun. Yönetici yetkisi gerekir. Oturumu bir kez kapatıp açın; eski arayüz süreci kapanır ve eski sistem autostart girdisi kaldırılır. Sonra BB Kilit'i elle açın.
 
-## Mimari ve kullanım akışı
+Tahta anahtarı, kimliği ve web adresi korunur; Vercel kaydını yeniden eklemeyin. Yeni paket yalnız web 0.2.0/protokol v2 ile çalışır. Eski sekmeyi yenileyin ve yeni QR okutun. BB Kilit kısayolu görünmezse uygulama menüsündeki BB Kilit'i açın; kullanıcı masaüstü kısayolu oluşturulur. Masaüstü devre dışıysa menüyü kullanın.
 
-1. ETAP'ın grafik oturumunda `tahta-kilit` otomatik açılır ve tam ekran kilit arayüzünü gösterir.
-2. Root yetkili `tahta-kilit-verifier` servisi yerel Unix soketi açar. Anahtarı yalnız bu servis okur.
-3. Servis 128 bit rastgele nonce üretir; HMAC-SHA256 QR imzası hesaplar. Arayüz, tahtanın QR'ını her 120 saniyede yeniler.
-4. Öğretmen QR'ı telefon kamerasıyla okutur. Web sayfası QR bağlantısını açar.
-5. Öğretmen Excel listesindeki **6 haneli Öğretmen Kodu** değerini girer. Altıncı rakamdan sonra web uygulaması otomatik doğrulama isteği yapar.
-6. Web sitesi öğretmen kodunu ve QR imzasını doğrular; 8 haneli açma kodunu gösterir.
-7. Öğretmen kodu tahtanın dokunmatik sayı tuş takımına girer. Tahta kodu internet kullanmadan aynı anahtarla tekrar hesaplar.
-8. Doğru, güncel ve kullanılmamış kodda kilit ekranı mevcut oturum boyunca tamamen gizlenir. Zamanlayıcıyla yeniden kilitleme yoktur. Sonraki Pardus oturum girişinde kilit yeniden başlar. Arayüz çöker veya yönetici tarafından yeniden başlatılırsa güvenlik için kilitli başlar.
+## İlk kurulum
 
-### Bileşenler
+1. `.deb` dosyasını grafik paket yöneticisiyle kurun. Eksik Python/GTK/QR/XDG bağımlılıkları için Pardus deposuna erişim gerekebilir.
+2. **Tahta Kilidi Kurulum** sihirbazını açın. Benzersiz tahta kimliği ve HTTPS site adresini girin.
+3. Sistem yönetici doğrulamasını tamamlayın. 32 bayt anahtar oluşturulur ve root izinleriyle saklanır.
+4. Gizli `BOARD_KEYS_JSON` kaydını Vercel Production'a ekleyin, yeniden dağıtın. Mevcut diğer tahta kayıtlarını koruyun; anahtarı paylaşmayın.
+5. Kullanıcı grubunun etkinleşmesi için oturumu kapatıp açın; BB Kilit'i elle açın.
 
-- **GTK 3 kilit ekranı:** Python 3 / PyGObject ile dokunmatik arayüzü açar; QR ve tuş takımını gösterir.
-- **Yerel doğrulama servisi:** Python standart kütüphanesiyle HMAC kontrolü, nonce süre sınırı, tekrar kullanımı engelleme ve deneme beklemesi uygular.
-- **Unix soketi:** Arayüz ile servis arasında aynı makinede izinleri sınırlı JSON iletişimi sağlar.
-- **systemd ve XDG autostart:** Servisi sistem açılışında, arayüzü grafik oturum açılışında başlatır; arayüz çökerse yeniden başlatır.
-- **`.deb` paketi:** Uygulama dosyaları, servis tanımları ve oturum başlatma girdilerini kurar. Pardus bağımlılık paketlerini sistemde bulmalı veya kurulum sırasında paket deposuna erişebilmelidir.
+Örnek kimlik: `ETAP-01`; site: `https://pardus-tahta-kilit-web.vercel.app/ac`. Bu değerler örnektir; gerçek anahtar içermez.
 
-## Kolay kurulum
+## Bileşenler ve çevrimdışı davranış
 
-### v0.1.6 — yönetici onaylı BB Kilit koruması
+- Python 3, GTK 3/PyGObject: normal arayüz, dokunmatik ve klavye girişi.
+- `python3-qrcode` ve Pillow: yerel QR görüntüsü.
+- Standart `secrets`, `hmac`, `hashlib`: nonce, QR imzası ve kod doğrulama.
+- Root doğrulama servisi + izinli Unix soketi; arayüz anahtarı doğrudan okuyamaz.
+- systemd sistem servisi: doğrulayıcıyı çalıştırır. Kullanıcı arayüz servisi yalnız başlatıcı tarafından açılır; normal kapanış yeniden başlatılmaz.
+- Debian `.deb`: kurulum/güncelleme. Başlangıç uyumluluk hedefi Pardus ETAP 23.4; gerçek sürüm cihazda doğrulanmalıdır.
 
-`tahta-kilit_0.1.6_all.deb` paketini üzerine kurup oturumu kapatıp açın. **Tahta Kilidi Kurulum** uygulamasını açın ve **BB Kilit kısayolunu silinmeye karşı koru** düğmesine basın. Pardus polkit penceresinde yetkili yönetici doğrulamasını tamamlayın. İlk kurulumda bu koruma, kurulumun yönetici onayıyla da uygulanır. **Kısayol korundu** mesajını görmeden silme engeli kurulmuş kabul etmeyin.
+Tahta günlük QR üretimi/doğrulama için internet kullanmaz. Telefonun kod servisine erişimi için internet gerekir. Yeni protokol `qr:v2` ve `unlock:v2` HMAC alanlarını, 120 saniyelik nonce süresini ve 6 haneli kodu kullanır. Ayrıntılı ortak algoritma web README'sindedir.
 
-Linux immutable dosya özelliğini destekleyen dosya sistemlerinde (tipik yerel ext4 kurulumlarında) başlatıcı root sahipli olur; silme, taşıma ve değiştirme engellenir. Özellik desteklenmezse hata/korunamadı mesajı gösterilir; normal dosya izinleri yeterli koruma gibi sunulmaz. Dosya yöneticisi silme denemesinde **izin reddedildi** gösterebilir; otomatik parola penceresi açılması garanti edilmez. Yönetici silmek için **Tahta Kilidi Kurulum → BB Kilit kısayolunun korumasını kaldır (yönetici)** düğmesini kullanıp sistem doğrulamasını tamamlar; ardından kısayolu silebilir. Öğretmen web kodu bu işlem için yönetici parolası değildir; yönetici parola/onay politikasını Pardus belirler.
+## Hatalar
 
-Kısayol korumasını kaldırmadan kullanıcı ev klasörünü silmeyin veya masaüstünü taşımayın. Paket kaldırılmadan önce korumayı bu uygulamadan kaldırın; paket kullanıcı masaüstündeki immutable dosyayı otomatik silmez. Korumalı eski başlatıcı güncellemede aynı başlatma yolunu kullanır. Bu özellik masaüstü klasörünü gizlemeyi/yeniden adlandırmayı, alternatif kullanıcı oturumlarını veya işletim sistemi yöneticisini bütünüyle kısıtlayan kiosk politikasının yerine geçmez.
+Yanlış/eski/yeniden kullanılmış kod reddedilir. Hatalı denemelerde 30/60 saniyelik yerel bekleme uygulanır. Anahtar uyuşmazsa yönetici tahta kaydını kontrol etmelidir. Kod başındaki sıfırları atlamayın. Yerel servis hatasında kurulum ve kullanıcı grubu kontrol edilir. Web erişimi yoksa yeni kod alınamaz. Pencere kapatma düğmesi uygulamayı kapatır; sistem kilidini açma iddiası yoktur.
 
-### v0.1.5 — BB Kilit masaüstü kısayolu
+## BB Kilit kısayol koruması
 
-`tahta-kilit_0.1.5_all.deb` dosyasını mevcut kurulumun üzerine çift tıklayarak kurun; oturumu bir kez kapatıp açın. Kullanıcının masaüstüne **BB Kilit** kısayolu eklenir; uygulama menüsünde de **BB Kilit** bulunur. İlk kurulum sihirbazı açıldığında da kısayol oluşturulur. Masaüstü klasörü XDG ayarından bulunur; masaüstü devre dışıysa menü girdisi kullanılabilir. Bazı masaüstleri ilk kullanımda **Başlatmaya izin ver / Güvenilir olarak işaretle** onayı isteyebilir.
+0.1.6'daki yönetici onaylı koruma korunur. **Tahta Kilidi Kurulum → BB Kilit kısayolunu silinmeye karşı koru** ile etkinleştirin. Linux immutable destekleyen dosya sistemlerinde silme/değiştirme/taşıma engellenir. **Kısayol korundu** mesajını görmeden etkin kabul etmeyin. Desteklenmeyen dosya sisteminde hata gösterilir.
 
-**BB Kilit** çift tıklandığında mevcut arayüz servisi yeniden başlatılır ve QR/kod giriş ekranı yeniden kilitli olarak açılır. Aynı anda ikinci bir arayüz oluşturulmaz. Öğretmen tahtayı açtıktan sonra tekrar kilitlemek için de bu kısayolu kullanabilir. QR üretimi ve tahtada doğrulama internetsiz çalışır; öğretmen telefonundaki web sitesi internet kullanır. Anahtarlar ve Vercel eşlemesi korunur. Kurulum tamamlanmamışsa kısayol ilk kurulum sihirbazını gösterir.
+Silmek/paketi kaldırmak/masaüstünü taşımak için önce **BB Kilit kısayolunun korumasını kaldır (yönetici)** düğmesiyle sistem yönetici onayını tamamlayın. Dosya yöneticisinin normal Sil işlemi parola penceresi yerine izin hatası gösterebilir. Bu koruma işletim sistemi yöneticisini, masaüstünün gizlenmesini veya alternatif oturumları engellemez.
 
-### v0.1.4 — kilitliyken masaüstü kısayolları
+## Kaynak ve paket oluşturma
 
-Alt+F1 gibi masaüstü kısayolları GTK pencere olayından önce pencere yöneticisi tarafından yakalanabilir. v0.1.4, kilit penceresi ekrana gelince `Gdk.Seat.grab` ile yalnız klavye girişini bu pencereye yönlendirir; fare ve dokunmatik girişi yakalamaz. Yakalama kesilirse tekrar denenir. Doğru kod sonrası klavye, pencere gizlenmeden önce serbest bırakılır; öğretmenin normal klavye kullanımı geri gelir. Masaüstü kısayol ayarları kalıcı olarak değiştirilmez.
-
-Ekranda **Klavye kilit penceresine yönlendirildi (X11)** veya **Wayland: kısayol kısıtlaması istendi** durumu gösterilir. Yakalama başarısız/desteksiz olduğunda uyarı görünür; güvenli kiosk kurulumu yapılmış gibi davranılmaz. Wayland'da GTK'nin toplevel klavye yakalaması, compositor'a shortcut-inhibit isteği gönderir; compositor/user reddedebilir veya protokolü desteklemeyebilir. Başarılı API dönüşü Wayland sistem kısayollarının engellendiğini kanıtlamaz. Yönetici masaüstünün çıkardığı izin isteğini değerlendirmeli ve kilit açıkken Alt+F1, Super, Alt+Tab gibi kısayolları gerçek cihazda sınamalıdır.
-
-Bu uygulama işletim sistemi/kiosk politikasının yerini almaz. Ctrl+Alt+F1…F6 TTY, güç/yeniden başlatma ve diğer sistem düzeyi davranışlar ayrıca kısıtlanmalıdır. Windows/WSLg'de geçen testler gerçek Pardus masaüstü kısayolları için kanıt değildir. GTK kaynakları: [Seat.grab](https://docs.gtk.org/gdk3/method.Seat.grab.html), [GTK 3 Wayland shortcut inhibition](https://mail.gnome.org/archives/commits-list/2017-November/msg06814.html).
-
-Yeni `tahta-kilit_0.1.4_all.deb` paketini mevcut kurulumun üzerine yükleyin, ardından oturumu kapatıp açın. Anahtar ve Vercel eşlemesi korunur; yeniden kurulum sihirbazı çalıştırmak gerekmez. v0.1.3'teki oturum boyunca gizli kalma davranışı devam eder. `tests/test_keyboard_guard.py`, `tests/test_session_unlock.py` ve geçici `tests/keyboard_native_smoke.py` bu yaşam döngüsünü kontrol eder; sonuncusu kısa bir test penceresi açar.
-
-### Mevcut kurulumun üzerine güncelleme — v0.1.3
-
-`tahta-kilit_0.1.3_all.deb` paketini indirip Pardus paket yöneticisinde çift tıklayarak mevcut `tahta-kilit` kurulumunun üzerine yükleyin. Paket adı değişmez; `0.1.3`, `0.1.2` sürümünden yenidir. Mevcut `/etc/tahta-kilit/board.key`, `config.json`, kullanıcı grubu ve Vercel anahtar eşlemesi korunur. Yeniden anahtar üretmeyin, kurulum sihirbazını tekrar tamamlamak veya `.sh` çalıştırmak gerekmez.
-
-Güncelleme çalışan doğrulama servisini yeniler. Açık olan GTK arayüzü mevcut süreçte eski sürümle devam edebileceğinden güncellemeden sonra oturumu bir kez kapatıp açın. Yeni girişte kullanıcı servis tanımları yeniden yüklenir ve yeni kilit süreci başlar. Kiosk oturumunun yönetici tarafından durdurulma/kısayol ayarları ayrıca korunmalıdır; paket kiosk yapılandırmasını kendiliğinden oluşturmaz.
-
-v0.1.3'te başarılı açma sonrası pencere, görev çubuğu ve pencere değiştirici görünürlüğü kaldırılır; QR yenileme ve sayaç zamanlayıcıları durur. GTK süreci arka planda kalır; normal açma işlemi süreci sonlandırmadığından `Restart=always` kilidi geri açmaz. Açma durumu yalnız o süreç belleğindedir; çökme, yönetici servis yeniden başlatması veya cihaz yeniden başlatması kilitli başlangıç yapar. Kullanıcı servis yöneticisi linger nedeniyle açık kalsa bile sonraki grafik oturum girişi yeni kilit sürecini başlatır.
-
-### Terminal kullanmadan kurulum (v0.1.2 ve sonrası)
-
-1. GitHub Releases'den `tahta-kilit_0.1.3_all.deb` dosyasını indirin, Pardus'ta çift tıklayıp paket yöneticisiyle kurun. Ayrı `.sh` dosyası gerekmez.
-2. Uygulama menüsünden **Tahta Kilidi Kurulum** penceresini açın. Yapılandırılmamış oturumda bir sonraki girişte bu pencere otomatik açılır.
-3. Tahta kimliğini ve öğretmen web adresini girin. **Kurulumu tamamla / mevcut anahtarı al** düğmesine basın. Sistem, yetkili yöneticinin parolasını grafik pencerede ister; terminal açılmaz.
-4. Sihirbaz yerel anahtarı oluşturur, sihirbazı açan standart oturum hesabını `tahta-kilit` grubuna ekler ve doğrulama servisini etkinleştirir. Mevcut yapılandırma ve anahtar varsa korunur; girilen yeni kimlik/adres uygulanmaz, kayıtlı değerler gösterilir.
-5. **Vercel kaydını kopyala** düğmesiyle tahta kimliği/anahtar eşlemesini kopyalayın. Vercel projesinin Production `BOARD_KEYS_JSON` değişkeninde mevcut kayıtları koruyarak bu eşlemeyi ekleyin ve yeniden dağıtın. Terminalde `base64` çalıştırmak gerekmez.
-6. Vercel eşleştirmesi tamamlanınca Pardus oturumunu kapatıp açın. Grup üyeliği yeni oturumda geçerli olur ve kilit ekranı otomatik başlar.
-
-Anahtar varsayılan olarak maskelenir. Kopyalanan mevcut pano içeriği 60 saniye sonunda veya pencere normal biçimde kapanınca temizlenir; pano geçmişi tutan başka uygulamalar ayrı kopya saklayabilir. Gizli anahtarı sohbet veya GitHub'da paylaşmayın. Sihirbazı yeniden açıp yönetici doğrulamasıyla aynı anahtarı tekrar alabilirsiniz.
-
-Python/GTK, QR ve polkit bağımlılıkları eksikse ilk kurulumda Pardus paket deposuna internet erişimi veya önceden hazırlanmış yerel paketler gerekir. Günlük QR üretimi ve tahta kod doğrulaması çevrimdışıdır. Paket kurulumu sırasında root hesabında grafik uygulama açılmaz; kullanıcı sihirbazı kendi oturumunda açar. Bu sürüm pilot paketidir; gerçek ETAP kiosk/kısayol testleri ayrıca yapılmalıdır.
-
-### Terminal kullanan eski kurulum yöntemi
-
-Bu yöntem GitHub Releases'den alınan `.deb` ile bu depodaki yardımcı betiği kullanır. Başka bir internet bağlantılı bilgisayarda dosyaları indirip USB ile tahtaya aktarabilirsiniz. Uygulamanın günlük çalışması için internet gerekmez; ilk kurulumdaki sistem bağımlılıkları için Pardus paket deposu bağlantısı gerekebilir.
-
-### 1. İndirme
-
-1. [GitHub Releases](https://github.com/enderkarahanli09/pardus-tahta-kilit/releases) sayfasından en son `tahta-kilit_<sürüm>_all.deb` paketini indirin.
-2. Bu depodaki [`scripts/install-pardus.sh`](https://github.com/enderkarahanli09/pardus-tahta-kilit/blob/main/scripts/install-pardus.sh) dosyasını indirin ve `install-pardus.sh` adıyla `.deb` dosyasının bulunduğu klasöre kaydedin.
-3. İki dosyayı tahtaya veya USB belleğe kopyalayın.
-
-### 2. Tek komutla kurulum
-
-Dosyaların olduğu klasörde terminal açın. Paket dosya adını indirdiğiniz sürüme göre yazın:
-
-```sh
-sudo sh ./install-pardus.sh ./tahta-kilit_0.1.3_all.deb
-```
-
-Yardımcı betik şunları yapar:
-
-- Mevcut anahtar/config varsa üzerine yazmamak için durur.
-- Grafik oturum kullanıcısını sorar; `sudo` ile açıldıysa mevcut oturum hesabını varsayılan gösterir.
-- Tahta kimliğini ve web adresini sorar. Varsayılan web adresi `https://pardus-tahta-kilit-web.vercel.app/ac` olur.
-- `.deb` paketini `apt-get install` ile kurar; eksik Python, GTK ve QR bağımlılıklarını Pardus paket yöneticisinden yükler.
-- Tahta için 256 bit anahtar üretir, yerel yapılandırmayı yazar, doğrulama servisini başlatır ve seçilen oturum kullanıcısını `tahta-kilit` grubuna ekler.
-
-Tahta kimliği yalnız büyük Latin harfleri, rakam ve tire içerebilir; örneğin `ETAP-01`. Bu kimlik, Vercel'deki tahta anahtarı kaydında **aynı yazılmalıdır**. Tahtanın grafik oturumunu kapatıp yeniden açın; ilk açılışta kilit ekranı otomatik gelmelidir.
-
-### İnternet olmayan kurulum
-
-QR üretimi ve tahta doğrulaması çalışma sırasında çevrimdışıdır. Kurulum betiği yerel `.deb` dosyasını kurarken eksik bağımlılıklar için `apt-get` kullanır. Tahtada internet yoksa şu iki seçeneği kullanın:
-
-1. Kurulumdan önce gereken bağımlılıkları Pardus paket deposuna erişen bir ağda indirin/kurun, ardından `.deb` paketini USB'den kurun.
-2. Ağ erişimli Pardus/ETAP ortamında paketi kurup anahtar/yapılandırmayı oluşturun; cihaz sürümü ve grafik oturum uyumunu yine hedef tahtada doğrulayın.
-
-Yalnız `.deb` dosyasının olması tüm bağımlılıkların içine gömülü olduğu anlamına gelmez. İnternetsiz kurulum için GTK, Python, QR ve sistem paketlerini de önceden hazırlayın.
-
-## Kurulumdan sonra web sunucusunu eşleştirme
-
-Her tahtada üretilen anahtarı, web uygulamasının sunucu ayarlarındaki `BOARD_KEYS_JSON` eşlemesine güvenli biçimde ekleyin. Örnek biçim:
-
-```json
-{"ETAP-01":"<bu-tahtaya-ait-base64-anahtar>"}
-```
-
-Anahtar değerini tahtada yönetici terminalinden almak için:
-
-```sh
-sudo base64 -w 0 /etc/tahta-kilit/board.key
-```
-
-Bu komutun çıktısı **gizli anahtardır**. Yalnız yetkili yönetici Vercel'in sunucu tarafındaki `BOARD_KEYS_JSON` değişkenine girsin. Anahtarı GitHub'a, bu sohbete, QR'a, öğretmen telefonuna veya ekran görüntüsüne koymayın. Değişken güncellenince web projesini yeniden dağıtın. Web uygulaması ayrıca öğretmen tablosunun OneDrive/Google E-Tablolar bağlantısını yönetici panelinin özel ayarında saklar; o bağlantı tahtaya aktarılmaz.
-
-Tahta yapılandırmasını yönetici olarak doğrulama:
-
-```sh
-sudo cat /etc/tahta-kilit/config.json
-sudo systemctl status tahta-kilit-verifier.service --no-pager
-```
-
-`config.json` içinde `board_id` ve HTTPS `site_url` bulunur; gizli anahtar `board.key` dosyasındadır. Anahtar içeriğini `cat` ile görüntülemeyin; Base64 aktarım komutunu yalnız güvenli Vercel ayarı için kullanın.
-
-## Elle kurulum
-
-Otomatik betik kullanmadan kurmak isteyen sistem yöneticisi:
-
-```sh
-sudo apt update
-sudo apt install ./tahta-kilit_0.1.3_all.deb
-sudo python3 -m tahta_kilit.provision --board-id ETAP-01 --site-url https://pardus-tahta-kilit-web.vercel.app/ac
-sudo usermod -aG tahta-kilit "$USER"
-sudo systemctl enable --now tahta-kilit-verifier.service
-```
-
-`sudo usermod` satırında `sudo` komutuyla çalışan shell içindeki `$USER` `root` olabilir. Böyle bir durumda gerçek ETAP oturum kullanıcısını açıkça yazın:
-
-```sh
-sudo usermod -aG tahta-kilit ogretmen
-```
-
-Paket yüklemesinden sonra oturumu kapatıp açmak gerekir; grup üyeliği var olan oturuma anında uygulanmaz. Provision komutu mevcut anahtarı veya yapılandırmayı hiçbir koşulda ezmez. Komut “zaten var” hatası verirse yeni anahtar üretmek için dosyaları silmeyin; önce mevcut tahtayı ve web anahtar eşlemesini yöneticinizle doğrulayın.
-
-### Otomatik kurulumda sorulacak değerler
-
-- **Grafik oturum kullanıcısı:** Kilit ekranının açılacağı standart ETAP kullanıcısı. Yönetici/root hesabı olmamalıdır.
-- **Tahta kimliği:** Yönetici tarafından seçilen benzersiz `ETAP-01` benzeri kimlik.
-- **Web adresi:** Öğretmenlerin açtığı HTTPS adresi; genellikle `/ac` ile biter.
-
-Bu bilgi ve anahtarlar tahtaya kurulum sırasında bir kez yazılır. Öğretmen kod listesi, OneDrive paylaşım bağlantısı ve öğretmen adları tahtaya gelmez.
-
-## Tahta başlatma ve günlük kullanım
-
-- **Başlangıç:** ETAP grafik oturumu kullanıcı girişinden sonra kilit ekranı otomatik başlamalıdır.
-- **QR:** 120 saniye geçerli olacak şekilde yenilenir. Süresi geçmiş QR'dan kod alınsa bile tahta eski nonce'ı kabul etmez. Yeni QR okutun.
-- **Açma kodu:** Öğretmen sayfasında Excel listesindeki 6 haneli öğretmen kodunun son rakamını girdikten sonra otomatik görünür. Tahtaya girilecek ayrı açma kodu 8 hanedir.
-- **Kullanım süresi:** Doğru koddan sonra kilit ekranı oturum boyunca gizlidir. 40 dakikalık yeniden kilitleme kaldırılmıştır; sonraki kullanıcı girişinde kilit yeniden açılır.
-- **İnternet kesilmesi:** Tahta QR üretmeye ve yerel doğrulamaya devam eder. Telefon ve web/API erişimi olmadan yeni bir öğretmen açma kodu alınamaz.
-- **Excel güncellemesi:** Öğretmen listesi web sunucusunca okunur. Yönetici panelinde Drive yenileme işlemi yapılır; Pardus paketinin yeniden kurulması gerekmez.
-- **Yanlış kod:** Beş yanlış denemeden sonra tahtada 30 saniye bekleme uygulanır; daha geniş periyotta ek bekleme vardır.
-- **Yeniden başlatma/çökme:** Arayüz yeniden açıldığında kilit ekranına döner; oturumun açık durumu diske kaydedilmez.
-
-## Windows/WSL üzerinde arayüz testi
-
-WSL, uygulamanın arayüzünü Windows masaüstünde açmaya yarar; gerçek Pardus/ETAP güvenlik davranışını taklit etmez. `Alt+F1` kapatma kısayolu sadece `TAHTA_KILIT_TEST_MODE=1` ile etkin olur.
-
-WSL2/WSLg ve Ubuntu kuruluysa Ubuntu terminalinde kaynak klasörüne gidin. Windows proje klasörü `/mnt/c` altında görünür. Gerekli arayüz kitaplıkları:
-
-```sh
-sudo apt update
-sudo apt install python3 python3-gi gir1.2-gtk-3.0 python3-qrcode python3-pil
-```
-
-Test modu, `/etc/tahta-kilit/config.json`, root korumalı `/etc/tahta-kilit/board.key`, `tahta-kilit` grubu ve çalışan yerel doğrulama servisi ister. Daha önce kurulum yapıldıysa iki ayrı terminalde çalıştırın.
-
-Terminal 1 — yerel doğrulama servisi (root):
-
-```sh
-sudo install -d -o root -g tahta-kilit -m 0750 /run/tahta-kilit
-cd "/mnt/c/Users/<WindowsKullanıcısı>/Desktop/Kendi Projelerim/Tübitak 2027/pardus-tahta-kilit"
-sudo env PYTHONPATH=src python3 -m tahta_kilit.verifier_service
-```
-
-Terminal 2 — test arayüzü:
-
-```sh
-cd "/mnt/c/Users/<WindowsKullanıcısı>/Desktop/Kendi Projelerim/Tübitak 2027/pardus-tahta-kilit"
-TAHTA_KILIT_TEST_MODE=1 PYTHONPATH=src python3 -m tahta_kilit.lock_screen
-```
-
-Bu komutlar daha önce yapılandırılmış tahtayı gerektirir. WSL'de henüz key/config yoksa önce test amaçlı .deb kurup `provision` çalıştırın veya ayrı bir test ortamı oluşturun; üretim tahtasının anahtarını kopyalamayın. Pencere odaktayken **Alt+F1** yalnız test uygulamasını kapatır. Normal Pardus dağıtımında test değişkeni tanımlanmaz ve bu çıkış kısayolu kullanılmaz.
-
-Gerçek ETAP'ta `Alt+Tab`, `Alt+F4`, `Ctrl+Alt+F1…F6`, güç menüsü, oturum kapatma ve BIOS/USB önyükleme davranışları ayrıca denenmelidir. WSLg, bu sistem çapı kısayol ve kiosk testlerinin yerine geçmez.
-
-## Güvenlik ve öğrenci oturumu
-
-### Dosya ve süreç izinleri
-
-- `/etc/tahta-kilit/board.key`: root sahibi, `0600`; yalnız root doğrulama servisi okur.
-- `/etc/tahta-kilit/config.json`: root ve `tahta-kilit` grubu; arayüz yalnız tahta kimliği/web URL'sini okur.
-- `/run/tahta-kilit/verifier.sock`: root:`tahta-kilit`, `0660`; yalnız yetkilendirilmiş yerel grup erişir.
-- Doğrulama servisi root olarak çalışsa da `CAP_CHOWN` dışındaki Linux yetkileri sınırlandırılmıştır; ağ adres aileleri, eşzamanlı istemci sayısı, görev ve bellek kullanımı da kısıtlanır.
-- Öğretmen web/API sırrı, OneDrive bağlantısı ve Excel satırları UI sürecine ve öğrenci hesabına aktarılmaz.
-
-### İşletim sistemi düzeyi kısıtlar
-
-1. Öğrenci/tahta oturumunu standart kullanıcı yapın; `sudo`, yönetici parolası veya root erişimi vermeyin.
-2. Terminal, uygulama başlatma penceresi, dosya yöneticisi, ayarlar, sistem menüsü ve oturum kapatma/yeniden başlatma seçeneklerini ETAP kiosk politikasına göre kısıtlayın.
-3. Masaüstü pencere yöneticisi ve ETAP politikaları üzerinden `Alt+Tab`, `Alt+F4`, `Ctrl+Alt+F1…F6` ve diğer sistem kısayollarını gerçek cihazda doğrulayın.
-4. UEFI/BIOS yönetici parolası ve harici USB'den önyükleme kurallarını okul yöneticisi ayarlasın.
-5. `TAHTA_KILIT_TEST_MODE=1` yalnız test içindir. Gerçek oturumun autostart veya systemd tanımına eklemeyin.
-
-**Yayın engeli:** Arayüz `systemd --user` biriminde, oturum kullanıcısının yetkileriyle çalışır. Aynı hesap terminal veya başka bir yönetim aracı açabiliyorsa `systemctl --user stop/disable tahta-kilit-ui.service` komutuyla kilidi durdurabilir; `Restart=always` bu kasıtlı durdurmayı engellemez. Bu nedenle öğrenci hesabı ETAP kiosk oturumuyla sınırlandırılmalı, terminal/kısayollar engellenmeli ve uygulama oturum yöneticisi tarafından korunmalıdır. Yalnız GTK tam ekranı öğrenciyi kilitlemek için yeterli değildir.
-
-Yönetici/root yetkisine erişebilen biri uygulamayı durdurabilir, kaldırabilir veya anahtarları değiştirebilir; yazılımın amacı yöneticiye karşı koruma sağlamak değildir. Fiziksel güç düğmesi, BIOS, harici önyükleme ve işletim sistemi açıklarına karşı garanti verilmez. Gerçek ETAP'ta `Alt+Tab`, `Alt+F4`, `Ctrl+Alt+F1…F6`, güç menüsü, oturum kapatma, kiosk oturumu ve uygulama servisinin öğrenci hesabından durdurulamaması ayrıca doğrulanmalıdır.
-
-## Sorun giderme
-
-| Belirti | Kontrol / işlem |
-| --- | --- |
-| Grafik oturum açılınca kilit ekranı gelmiyor | Oturumu kapatıp açın; XDG autostart `tahta-kilit.desktop` dosyasını ve kullanıcı systemd servisini kontrol edin. `journalctl --user -u tahta-kilit-ui.service -b` ile kullanıcı servisi günlüğüne bakın. |
-| “Yerel doğrulama servisine ulaşılamıyor” | `sudo systemctl status tahta-kilit-verifier.service --no-pager` ve `sudo journalctl -u tahta-kilit-verifier.service -b --no-pager` komutlarını çalıştırın. Tahta oturum kullanıcısının `tahta-kilit` grubunda olduğunu doğrulayın; sonra oturumu yeniden açın. |
-| QR hiç görünmüyor | Doğrulama servisi, config ve anahtar izinlerini kontrol edin. Web sitesi interneti olmasa da QR üretilir; tahta üzerindeki QR için web API'si gerekmez. |
-| Telefon “QR geçersiz” diyor | QR'ın `/ac` HTTPS adresine gittiğini, `board` kimliğinin sunucu `BOARD_KEYS_JSON` içinde olduğunu ve `sig` imzası için aynı anahtarın kullanıldığını kontrol edin. |
-| Öğretmen sayfası geçersiz kod diyor | Altı haneli **Öğretmen Kodu** sütununu girin; ID veya öğretmen adı kullanılmaz. Güncel QR okutun. Excel başlıklarının `ID`, `Öğretmen Adı`, `Öğretmen Kodu` olduğunu ve kodların benzersiz altı rakam olduğunu doğrulayın. |
-| Web sayfası Drive listesini okuyamıyor | Yönetici panelinde “Drive'dan şimdi güncelle” sonucuna bakın. Dosyanın görüntüleme paylaşım iznini, çalışma sayfasındaki başlıkları, eksik/tekrarlı satırları ve HTTPS paylaşım adresini kontrol edin. |
-| Doğru 8 hane tahtada reddediliyor | QR'ın yenilenmediğini (120 saniye), tahta/sunucu kimlik ve anahtar eşleşmesini, kodu son QR'dan aldığınızı ve nonce'ın daha önce kullanılmadığını doğrulayın. |
-| Birçok yanlış koddan sonra giriş yapılamıyor | Tahtadaki bekleme süresini tamamlayın; doğru öğretmen kodunu ve güncel QR'ı yeniden kullanın. |
-| Servis `systemd` olmadan çalışmıyor | WSL'de systemd ve soket izinleri Pardus ile aynı olmayabilir. WSL yalnız arayüz geliştirme testi içindir; gerçek servis davranışını ETAP cihazında doğrulayın. |
-
-### Yönetici tanılama komutları
-
-```sh
-sudo systemctl status tahta-kilit-verifier.service --no-pager
-sudo journalctl -u tahta-kilit-verifier.service -b --no-pager
-systemctl --user status tahta-kilit-ui.service --no-pager
-journalctl --user -u tahta-kilit-ui.service -b --no-pager
-id ogretmen
-ls -ld /etc/tahta-kilit /run/tahta-kilit
-ls -l /etc/tahta-kilit/config.json /etc/tahta-kilit/board.key
-```
-
-`ls -l` yalnız sahiplik ve izin bilgisini gösterir; anahtar içeriğini göstermez. Öğrenci cihazında tanılama komutlarını yönetici hesabıyla çalıştırın.
-
-## Kaldırma ve anahtar saklama
-
-Programı kaldırmak için:
-
-```sh
-sudo apt remove tahta-kilit
-```
-
-Paket kaldırma doğrulama servisini durdurur. Güvenlik nedeniyle uygulama tarafından oluşturulan `/etc/tahta-kilit/` ayarları ve anahtar otomatik silinmez. Bu anahtarla yeniden kurulum yapılacaksa aynı Vercel eşlemesi korunmalıdır. Tahtayı kullanım dışı bırakıyorsanız önce ilgili `BOARD_KEYS_JSON` girdisini web sunucusundan iptal edin; sonra yönetici onayıyla anahtar/config yedeğini okul saklama politikasına göre silin.
-
-Anahtarı yenilemek, web sunucusundaki anahtar eşlemesini ve tahtadaki anahtarı aynı bakım penceresinde değiştirmeyi gerektirir. Provision aracı mevcut dosyaların üzerine yazmaz. Dosyaları silerek yeniden provision etmeye çalışmayın; iki tarafta anahtarlar farklı kalırsa bütün QR'lar reddedilir.
-
-## Geliştirme ve paket oluşturma
-
-Paket oluşturmak için Pardus/Debian veya uyumlu bir Linux ortamında `dpkg-deb`, `sed`, `install` ve `tar` araçları bulunmalıdır. Windows üzerinde WSL Ubuntu ile depoya geçin:
-
-```sh
-cd "/mnt/c/Users/<WindowsKullanıcısı>/Desktop/Kendi Projelerim/Tübitak 2027/pardus-tahta-kilit"
-sh scripts/build-deb.sh
-```
-
-Paket `dist/tahta-kilit_<debian/changelog-sürümü>_all.deb` yolunda oluşur. Sürüm `debian/changelog` dosyasının ilk satırından alınır. Kaynak ve paket dosyalarını pilot ETAP tahtasında deneyin; Windows'taki `.deb` üretimi ETAP uyumluluğunu kanıtlamaz.
-
-Çalışma zamanı gereksinimleri Debian/Pardus paket bağımlılıklarında tanımlıdır:
-
-- `python3`
-- `python3-gi` ve `gir1.2-gtk-3.0`
-- `python3-qrcode`, `python3-pil`
-- `systemd`, `adduser`
-
-## Kaynak kod haritası
-
-- `src/tahta_kilit/lock_screen.py`: GTK kilit ekranı, QR gösterimi ve dokunmatik tuş takımı.
-- `src/tahta_kilit/verifier_service.py`: root yetkili Unix soketi, nonce ve açma kodu doğrulaması.
-- `src/tahta_kilit/protocol.py`: web uygulamasıyla ortak HMAC/nonce protokolü.
-- `src/tahta_kilit/provision.py`: benzersiz tahta kimliği config'i ve 256 bit anahtar üretimi.
-- `scripts/install-pardus.sh`: `.deb` kurulumunu ve ilk yapılandırmayı adım adım tamamlayan yönetici yardımcısı.
-- `scripts/build-deb.sh`: Debian paketi üretimi.
-- `debian/`: paket metaverisi, bağımlılıklar ve kurulum/kaldırma kancaları.
-- `share/`: systemd servisleri, grafik oturum başlatıcısı ve XDG autostart girdisi.
-
-## Web kodları ve veri sınırı
-
-Web uygulaması yalnız öğretmen kodunu doğrular ve QR'a özel açma kodunu üretir. Pardus uygulaması web sitesine/OneDrive'a istek göndermez; telefon bağlantı yoksa yeni açma kodu alınmaz. Sunucu tarafı öğretmen listesi yenileme davranışı için web deposundaki README'ye bakın: [pardus-tahta-kilit-web README](https://github.com/enderkarahanli09/pardus-tahta-kilit-web/blob/main/README.md).
+Linux ortamında `sh scripts/build-deb.sh` paketi `dist/` altında oluşturur. Kaynak `src/tahta_kilit/`, paket girdileri `share/`, Debian kurulum betikleri `debian/` altındadır. `board.key` `/etc/tahta-kilit/` altında tutulur ve pakete/Git'e eklenmez. Windows WSL/WSLg arayüz geliştirmesi için kullanılabilir; gerçek Pardus kurulumu ve masaüstü entegrasyonu ayrıca doğrulanmalıdır.

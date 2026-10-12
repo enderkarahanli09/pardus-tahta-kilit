@@ -7,8 +7,8 @@ import re
 
 NONCE_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 BOARD_ID_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9-]{0,63}$")
-UNLOCK_CODE_LENGTH = 8
-UNLOCK_CODE_SPACE = 100_000_000
+UNLOCK_CODE_LENGTH = 6
+UNLOCK_CODE_SPACE = 1_000_000
 
 
 def _validate_key(key):
@@ -35,17 +35,17 @@ def qr_signature(key, board_id, nonce):
     _validate_key(key)
     _validate_board_id(board_id)
     _validate_nonce(nonce)
-    message = "qr:v1|{}|{}".format(board_id, nonce).encode("ascii")
+    message = "qr:v2|{}|{}".format(board_id, nonce).encode("ascii")
     digest = hmac.new(key, message, hashlib.sha256).digest()
     return _b64url_no_padding(digest)
 
 
 def unlock_code(key, board_id, nonce):
-    """HMAC'in ilk 8 baytını büyük endian okuyup 8 haneli koda indirger."""
+    """HMAC'in ilk 8 baytını büyük endian okuyup 6 haneli koda indirger."""
     _validate_key(key)
     _validate_board_id(board_id)
     _validate_nonce(nonce)
-    message = "unlock:v1|{}|{}".format(board_id, nonce).encode("ascii")
+    message = "unlock:v2|{}|{}".format(board_id, nonce).encode("ascii")
     digest = hmac.new(key, message, hashlib.sha256).digest()
     number = int.from_bytes(digest[:8], byteorder="big") % UNLOCK_CODE_SPACE
     return str(number).zfill(UNLOCK_CODE_LENGTH)
@@ -53,7 +53,7 @@ def unlock_code(key, board_id, nonce):
 
 def code_matches(key, board_id, nonce, candidate):
     """Sabit zamanlı karşılaştırmayla girilen kodu doğrular."""
-    if not isinstance(candidate, str) or not re.fullmatch(r"[0-9]{8}", candidate):
+    if not isinstance(candidate, str) or not re.fullmatch(r"[0-9]{6}", candidate):
         return False
     expected = unlock_code(key, board_id, nonce)
     return hmac.compare_digest(expected, candidate)
