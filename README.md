@@ -1,3 +1,11 @@
+# BB Kilit 0.1.14 — Yönetici onayıyla tahta kimliği değiştirme
+
+BB Kilit Kurulum artık mevcut tahta kimliğini, sistem yönetici onayıyla değiştirebilir. Anahtar korunur, yapılandırma atomik kaydedilir ve doğrulama servisi yeniden başlatılarak eski QR geçersiz hale gelir.
+
+BILISIM-01 için: paketi üzerine kurun; BB Kilit Kurulum uygulamasında tahta kimliğini BILISIM-01 yapıp güncelleyin. Gösterilen yeni gizli JSON kaydını Google tablosundaki BB Kilit → Tahta kaydet paneline ekleyin. Kaydı ekledikten sonra BB Kilit uygulamasını yeniden açın veya oturumu kapatıp açın. Anahtar yenilenmez, mevcut diğer tahta kayıtları otomatik silinmez. Yeni kimlik Google üzerinde farklı anahtarla kayıtlıysa kayıt reddedilir; başka bir tahta kimliği kullanın. Tahta kimliği tüm tahtalar arasında benzersiz olmalıdır.
+
+Paket yüklenmesi tek başına tüm cihazların kimliğini BILISIM-01 yapmaz; her cihazın yöneticisi kurulum ekranından seçer. Tam ekran, otomatik başlangıç ve 0.1.13 dokunmatik düzeltmesi korunur.
+
 # BB Kilit 0.1.13 — Dokunmatik giriş düzeltmesi
 
 0.1.12 içindeki tüm giriş cihazlarını yakalama, dokunmatik/fare olaylarını düğmelerden uzaklaştırabiliyordu. 0.1.13 yalnız klavyeyi yakalar; dokunma ve fare olayları GTK düğmelerine normal biçimde ulaşır. Tam ekran, oturum açılışında otomatik başlangıç, fiziksel klavye filtreleme ve doğru koddan sonra gizlenme korunur.

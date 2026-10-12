@@ -1,3 +1,10 @@
+tahta-kilit (0.1.14) unstable; urgency=medium
+
+  * Allow administrator-authorized board ID changes while preserving board key.
+  * Restart verifier after configuration changes and expose updated registration.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 18:30:00 +0300
+
 tahta-kilit (0.1.13) unstable; urgency=medium
 
   * Limit seat grab to keyboard so touchscreen and pointer reach GTK buttons.

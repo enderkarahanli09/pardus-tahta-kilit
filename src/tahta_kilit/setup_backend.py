@@ -12,6 +12,7 @@ import tempfile
 from base64 import b64encode
 
 from tahta_kilit import provision
+from tahta_kilit.protocol import BOARD_ID_PATTERN
 from tahta_kilit.verifier_service import read_config, read_key
 from tahta_kilit.shortcut_protection import protect_shortcut
 from tahta_kilit.site_url import validate_site_url
@@ -30,6 +31,8 @@ def configure(arguments):
         return protect_shortcut(caller, arguments[1], arguments[0] == "--protect-shortcut")
     if len(arguments) not in (2, 3):
         raise ValueError("Tahta kimliği ve HTTPS web adresi gerekiyor.")
+    if not isinstance(arguments[0], str) or not BOARD_ID_PATTERN.fullmatch(arguments[0]):
+        raise ValueError("Tahta kimliği büyük harf, rakam ve tire içermeli; en fazla 64 karakter olmalı.")
     validate_site_url(arguments[1])
 
     key_exists = os.path.lexists(provision.KEY_PATH)
@@ -48,13 +51,14 @@ def configure(arguments):
 
     config = read_config()
     key = read_key()
-    if config["board_id"] != arguments[0]:
-        raise ValueError("Mevcut tahta kimliğini değiştirmeyin; aynı kimlikle site adresini güncelleyin.")
-    if config["site_url"] != arguments[1]:
+    previous_board_id = config["board_id"]
+    changed = config["board_id"] != arguments[0] or config["site_url"] != arguments[1]
+    if changed:
         directory = os.lstat(provision.CONFIG_DIR)
         if not stat.S_ISDIR(directory.st_mode) or directory.st_uid != 0 or stat.S_IMODE(directory.st_mode) & 0o022:
             raise PermissionError("Tahta ayar dizini root tarafından korunmalıdır.")
         current = os.stat(provision.CONFIG_PATH)
+        config["board_id"] = arguments[0]
         config["site_url"] = arguments[1]
         descriptor, temporary = tempfile.mkstemp(prefix=".site-update-", dir=provision.CONFIG_DIR)
         try:
@@ -77,12 +81,17 @@ def configure(arguments):
         ["/usr/bin/systemctl", "enable", "--now", "tahta-kilit-verifier.service"],
         check=True, capture_output=True, timeout=30,
     )
+    if changed:
+        subprocess.run(["/usr/bin/systemctl", "restart", "tahta-kilit-verifier.service"],
+                       check=True, capture_output=True, timeout=30)
     result = {
         "boardId": config["board_id"],
         "siteUrl": config["site_url"],
         "sessionUser": caller.pw_name,
         "boardKeysEntry": {config["board_id"]: b64encode(key).decode("ascii")},
         "existing": key_exists,
+        "previousBoardId": previous_board_id,
+        "boardIdChanged": previous_board_id != config["board_id"],
     }
     if len(arguments) == 3:
         try:

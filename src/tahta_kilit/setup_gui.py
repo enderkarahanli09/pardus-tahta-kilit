@@ -54,7 +54,7 @@ class SetupWindow(Gtk.Window):
             self.site.set_text(resolve_site_url(config["site_url"]))
         except (OSError, ValueError, KeyError, TypeError):
             pass
-        self.install = Gtk.Button(label="Kurulumu tamamla / site adresini güncelle")
+        self.install = Gtk.Button(label="Kurulumu / tahta kimliğini / siteyi güncelle")
         self.install.connect("clicked", self.on_install)
         box.pack_start(self.install, False, False, 0)
         self.protect_button = Gtk.Button(label="BB Kilit kısayolunu silinmeye karşı koru")
@@ -74,7 +74,7 @@ class SetupWindow(Gtk.Window):
         self.copy.set_sensitive(False)
         self.copy.connect("clicked", self.on_copy)
         box.pack_start(self.copy, False, False, 0)
-        self.add_text(box, "Google tablosunda BB Kilit → Tahta kaydet menüsüne bu kaydı yapıştırın. Vercel kullanıyorsanız mevcut JSON'a ekleyin. Anahtarı sohbet veya GitHub'da paylaşmayın.")
+        self.add_text(box, "Google tablosunda BB Kilit → Tahta kaydet menüsüne bu kaydı yapıştırın. Anahtarı sohbet veya GitHub'da paylaşmayın.")
 
     @staticmethod
     def add_text(box, text, bold=False):
@@ -163,6 +163,8 @@ class SetupWindow(Gtk.Window):
         self.key.set_text(self.secret_json)
         self.copy.set_sensitive(True)
         prefix = "Mevcut anahtar korundu. " if result["existing"] else "Tahta anahtarı oluşturuldu. "
+        if result.get("boardIdChanged"):
+            prefix += "Tahta kimliği " + result["previousBoardId"] + " → " + result["boardId"] + " olarak değiştirildi. Yeni JSON kaydını Google paneline ekleyin. "
         protection = " BB Kilit kısayolu korundu." if result.get("shortcutProtected") else " Kısayol korunamadı; dosya sistemi/yönetici ayarlarını kontrol edin."
         self.status.set_text(prefix + "Kurulum tamamlandı. Tahta kaydını kod servisine ekleyin. İlk kurulumda oturumu kapatıp açın; site adresi değişince BB Kilit'i yeniden açın." + protection)
         return False
