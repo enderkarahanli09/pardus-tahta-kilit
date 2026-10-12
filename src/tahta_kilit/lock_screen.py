@@ -6,6 +6,8 @@ import socket
 from io import BytesIO
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
+from tahta_kilit.site_url import resolve_site_url
+
 import qrcode
 import gi
 gi.require_version("Gtk", "3.0")
@@ -58,7 +60,7 @@ def call_verifier(payload):
 
 
 def build_qr_url(site_url, challenge):
-    parts = urlsplit(site_url)
+    parts = urlsplit(resolve_site_url(site_url))
     query = urlencode(
         {
             "v": "2",

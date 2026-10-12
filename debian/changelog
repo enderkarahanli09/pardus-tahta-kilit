@@ -1,3 +1,10 @@
+tahta-kilit (0.1.11) unstable; urgency=medium
+
+  * Route legacy Vercel QR URLs directly to Google Apps Script.
+  * Default new installations to the Google code service.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 17:00:00 +0300
+
 tahta-kilit (0.1.10) unstable; urgency=medium
 
   * Use a transparent PNG school badge without rectangular background.

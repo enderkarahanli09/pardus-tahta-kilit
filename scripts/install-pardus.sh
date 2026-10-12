@@ -42,9 +42,9 @@ BOARD_ID=${BOARD_ID:-ETAP-01}
 printf '%s\n' "$BOARD_ID" | grep -Eq '^[A-Z0-9][A-Z0-9-]{0,63}$' || \
     fail "Tahta kimliği büyük A-Z harfleri, rakam ve tire içermelidir."
 
-printf 'Öğretmen web adresi [https://pardus-tahta-kilit-web.vercel.app/ac]: '
+printf 'Öğretmen web adresi [https://script.google.com/macros/s/AKfycbzl4l1T9ONvPlbzYROs8uQajxuHrk8FiY82d_7MAbsRIkXcpMziWgsMhO5QRVbc0kAF/exec]: '
 IFS= read -r SITE_URL
-SITE_URL=${SITE_URL:-https://pardus-tahta-kilit-web.vercel.app/ac}
+SITE_URL=${SITE_URL:-https://script.google.com/macros/s/AKfycbzl4l1T9ONvPlbzYROs8uQajxuHrk8FiY82d_7MAbsRIkXcpMziWgsMhO5QRVbc0kAF/exec}
 case "$SITE_URL" in
     https://*) ;;
     *) fail "Web adresi https:// ile başlamalıdır." ;;

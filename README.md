@@ -1,8 +1,8 @@
-# BB Kilit — Borusan Bilişim Kilit 0.1.10
+# BB Kilit — Borusan Bilişim Kilit 0.1.11
 
-## 0.1.10 üzerine güncelleme ve yeni görsel düzen
+## 0.1.11 üzerine güncelleme ve yeni görsel düzen
 
-`tahta-kilit_0.1.10_all.deb` dosyasını mevcut kurulumun üzerine kurun, ardından BB Kilit uygulamasını başlatıcıdan yeniden açın. Tahta anahtarı ve Google site adresi korunur. Küçük ekranlarda içerik kaydırılabilir. Uygulama adı **BB Kilit**, açılımı **Borusan Bilişim Kilit** olarak gösterilir. Ana arayüz siyah arka plan, turuncu vurgu ve beyaz metin kullanır. QR siyah-beyaz bırakılır; kod tuş takımı koyu renk, giriş düğmesi turuncudur. Okulun Instagram profilindeki yuvarlak logosu yerel paket varlığı olarak `/usr/share/tahta-kilit/borusan-mtal-logo.jpg` konumundan yüklenir; logo için internet gerekmez. Kaynak dosya `share/assets/borusan-mtal-logo.jpg` olarak eklenir. Logo kullanıcı tarafından belirtilen https://www.instagram.com/borusanasimkocabiyikmtal/ profilinden alınmıştır; üstte ortalanır. Paket logo dosyasını içerir. Profil görseli 100×100 pikseldir ve arayüzde oranı korunarak 80×80 gösterilir. Sağ alt genişletme alanı sonraki ekleme için boş bırakılmıştır. Kurulum menüsünün görünen adı artık **BB Kilit Kurulum** olur.
+`tahta-kilit_0.1.11_all.deb` dosyasını mevcut kurulumun üzerine kurun, ardından BB Kilit uygulamasını başlatıcıdan yeniden açın. Tahta anahtarı ve Google site adresi korunur. Küçük ekranlarda içerik kaydırılabilir. Uygulama adı **BB Kilit**, açılımı **Borusan Bilişim Kilit** olarak gösterilir. Ana arayüz siyah arka plan, turuncu vurgu ve beyaz metin kullanır. QR siyah-beyaz bırakılır; kod tuş takımı koyu renk, giriş düğmesi turuncudur. Okulun Instagram profilindeki yuvarlak logosu yerel paket varlığı olarak `/usr/share/tahta-kilit/borusan-mtal-logo.jpg` konumundan yüklenir; logo için internet gerekmez. Kaynak dosya `share/assets/borusan-mtal-logo.jpg` olarak eklenir. Logo kullanıcı tarafından belirtilen https://www.instagram.com/borusanasimkocabiyikmtal/ profilinden alınmıştır; üstte ortalanır. Paket logo dosyasını içerir. Profil görseli 100×100 pikseldir ve arayüzde oranı korunarak 80×80 gösterilir. Sağ alt genişletme alanı sonraki ekleme için boş bırakılmıştır. Kurulum menüsünün görünen adı artık **BB Kilit Kurulum** olur.
 
 ## Google Apps Script ile tahta kaydı
 
@@ -62,4 +62,6 @@ Silmek/paketi kaldırmak/masaüstünü taşımak için önce **BB Kilit kısayol
 
 Linux ortamında `sh scripts/build-deb.sh` paketi `dist/` altında oluşturur. Kaynak `src/tahta_kilit/`, paket girdileri `share/`, Debian kurulum betikleri `debian/` altındadır. `board.key` `/etc/tahta-kilit/` altında tutulur ve pakete/Git'e eklenmez. Windows WSL/WSLg arayüz geliştirmesi için kullanılabilir; gerçek Pardus kurulumu ve masaüstü entegrasyonu ayrıca doğrulanmalıdır.
 
-0.1.10: Logonun dışındaki kare arka plan kaldırıldı; şeffaf PNG ve yuvarlak rozet kullanılır. İç beyaz alan yazıların okunması için korunur.
+0.1.11: Logonun dışındaki kare arka plan kaldırıldı; şeffaf PNG ve yuvarlak rozet kullanılır. İç beyaz alan yazıların okunması için korunur.
+
+0.1.11: Eski Vercel adresi kayıtlı olsa bile QR doğrudan Google Apps Script kod sitesini açar. Yeni kurulumlarda Google adresi varsayılandır. Tahta kimliği ve anahtarı korunur. Güncellemeden sonra açık BB Kilit penceresini kapatıp yeniden açın.

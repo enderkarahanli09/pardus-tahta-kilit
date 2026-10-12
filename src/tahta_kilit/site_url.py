@@ -15,3 +15,13 @@ def validate_site_url(value):
             or (parts.path not in ("", "/", "/ac") and not gas)):
         raise ValueError("HTTPS site adresi veya Google Apps Script /exec adresi gerekiyor.")
     return value
+
+
+DEFAULT_SITE_URL = "https://script.google.com/macros/s/AKfycbzl4l1T9ONvPlbzYROs8uQajxuHrk8FiY82d_7MAbsRIkXcpMziWgsMhO5QRVbc0kAF/exec"
+
+def resolve_site_url(value):
+    validate_site_url(value)
+    parts = urlsplit(value)
+    if parts.hostname == "pardus-tahta-kilit-web.vercel.app":
+        return DEFAULT_SITE_URL
+    return value

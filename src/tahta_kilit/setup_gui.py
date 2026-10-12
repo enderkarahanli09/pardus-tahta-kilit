@@ -10,6 +10,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
+from tahta_kilit.site_url import DEFAULT_SITE_URL, resolve_site_url
 from tahta_kilit.desktop_shortcut import main as install_desktop_shortcut
 from tahta_kilit.desktop_shortcut import find_desktop_directory
 
@@ -45,12 +46,12 @@ class SetupWindow(Gtk.Window):
         self.add_text(box, "Yönetici doğrulaması sistem penceresinde yapılır. Mevcut tahta anahtarı değiştirilmez.")
         self.add_text(box, "Oturum hesabı: " + pwd.getpwuid(os.getuid()).pw_name)
         self.board = self.add_entry(box, "Tahta kimliği (örnek: ETAP-01)", "ETAP-01")
-        self.site = self.add_entry(box, "QR sitesinin HTTPS / Apps Script adresi", "https://pardus-tahta-kilit-web.vercel.app/ac")
+        self.site = self.add_entry(box, "QR sitesinin HTTPS / Apps Script adresi", DEFAULT_SITE_URL)
         try:
             with open("/etc/tahta-kilit/config.json", encoding="utf-8") as config_file:
                 config = json.load(config_file)
             self.board.set_text(config["board_id"])
-            self.site.set_text(config["site_url"])
+            self.site.set_text(resolve_site_url(config["site_url"]))
         except (OSError, ValueError, KeyError, TypeError):
             pass
         self.install = Gtk.Button(label="Kurulumu tamamla / site adresini güncelle")
