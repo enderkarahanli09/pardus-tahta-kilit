@@ -30,9 +30,9 @@ class SetupWindow(Gtk.Window):
         self.add(box)
         self.add_text(box, "Tahta Kilidi ilk kurulumu", bold=True)
         self.add_text(box, "Yönetici doğrulaması sistem penceresinde yapılır. Mevcut tahta anahtarı değiştirilmez.")
-        self.add_text(box, "Otomatik başlangıç hesabı: " + pwd.getpwuid(os.getuid()).pw_name)
+        self.add_text(box, "Oturum hesabı: " + pwd.getpwuid(os.getuid()).pw_name)
         self.board = self.add_entry(box, "Tahta kimliği (örnek: ETAP-01)", "ETAP-01")
-        self.site = self.add_entry(box, "Öğretmen web adresi", "https://pardus-tahta-kilit-web.vercel.app/ac")
+        self.site = self.add_entry(box, "QR sitesinin HTTPS / Apps Script adresi", "https://pardus-tahta-kilit-web.vercel.app/ac")
         try:
             with open("/etc/tahta-kilit/config.json", encoding="utf-8") as config_file:
                 config = json.load(config_file)
@@ -40,7 +40,7 @@ class SetupWindow(Gtk.Window):
             self.site.set_text(config["site_url"])
         except (OSError, ValueError, KeyError, TypeError):
             pass
-        self.install = Gtk.Button(label="Kurulumu tamamla / mevcut anahtarı al")
+        self.install = Gtk.Button(label="Kurulumu tamamla / site adresini güncelle")
         self.install.connect("clicked", self.on_install)
         box.pack_start(self.install, False, False, 0)
         self.protect_button = Gtk.Button(label="BB Kilit kısayolunu silinmeye karşı koru")
@@ -49,18 +49,18 @@ class SetupWindow(Gtk.Window):
         self.unprotect_button = Gtk.Button(label="BB Kilit kısayolunun korumasını kaldır (yönetici)")
         self.unprotect_button.connect("clicked", self.on_shortcut_protection, False)
         box.pack_start(self.unprotect_button, False, False, 0)
-        self.status = self.add_text(box, "Kurulum tamamlandıktan sonra anahtarı Vercel'e ekleyip oturumu kapatıp açın.")
-        self.key = self.add_entry(box, "Vercel BOARD_KEYS_JSON için kayıt (gizli)", "")
+        self.status = self.add_text(box, "Kurulum tamamlandıktan sonra tahta kaydını kod servisine ekleyip oturumu kapatıp açın.")
+        self.key = self.add_entry(box, "Google Apps Script / kod servisi için tahta kaydı (gizli)", "")
         self.key.set_editable(False)
         self.key.set_visibility(False)
         self.reveal = Gtk.CheckButton(label="Gizli kaydı göster")
         self.reveal.connect("toggled", lambda widget: self.key.set_visibility(widget.get_active()))
         box.pack_start(self.reveal, False, False, 0)
-        self.copy = Gtk.Button(label="Vercel kaydını kopyala")
+        self.copy = Gtk.Button(label="Tahta kaydını kopyala")
         self.copy.set_sensitive(False)
         self.copy.connect("clicked", self.on_copy)
         box.pack_start(self.copy, False, False, 0)
-        self.add_text(box, "Vercel'de mevcut kayıtları koruyarak bu tahta kaydını ekleyin ve yeniden dağıtın. Anahtarı sohbet veya GitHub'da paylaşmayın.")
+        self.add_text(box, "Google tablosunda BB Kilit → Tahta kaydet menüsüne bu kaydı yapıştırın. Vercel kullanıyorsanız mevcut JSON'a ekleyin. Anahtarı sohbet veya GitHub'da paylaşmayın.")
 
     @staticmethod
     def add_text(box, text, bold=False):
@@ -150,7 +150,7 @@ class SetupWindow(Gtk.Window):
         self.copy.set_sensitive(True)
         prefix = "Mevcut anahtar korundu. " if result["existing"] else "Tahta anahtarı oluşturuldu. "
         protection = " BB Kilit kısayolu korundu." if result.get("shortcutProtected") else " Kısayol korunamadı; dosya sistemi/yönetici ayarlarını kontrol edin."
-        self.status.set_text(prefix + "Kurulum tamamlandı. Vercel'e ekleyip yeniden dağıtın; ardından Pardus oturumunu kapatıp açın." + protection)
+        self.status.set_text(prefix + "Kurulum tamamlandı. Tahta kaydını kod servisine ekleyin. İlk kurulumda oturumu kapatıp açın; site adresi değişince BB Kilit'i yeniden açın." + protection)
         return False
 
     def on_copy(self, _button):
@@ -158,7 +158,7 @@ class SetupWindow(Gtk.Window):
             self.copied_text = self.secret_json
             self.clipboard.set_text(self.secret_json, -1)
             GLib.timeout_add_seconds(60, self.clear_clipboard, self.secret_json)
-            self.status.set_text("Gizli kayıt kopyalandı. Vercel'e yapıştırın; pano 60 saniye sonra temizlenir. Sonra oturumu kapatıp açın.")
+            self.status.set_text("Gizli kayıt kopyalandı. Google tablosundaki kayıt ekranına yapıştırın; pano 60 saniye sonra temizlenir. Sonra oturumu kapatıp açın.")
 
     def clear_clipboard(self, copied):
         if self.clipboard.wait_for_text() == copied:

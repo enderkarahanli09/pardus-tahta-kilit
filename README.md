@@ -1,4 +1,10 @@
-# BB Kilit — Pardus 0.1.7
+# BB Kilit — Pardus 0.1.8
+
+## Google Apps Script ile tahta kaydı
+
+0.1.8, `https://script.google.com/macros/s/<deployment-id>/exec` biçimindeki kod sitesi adresini destekler. **Tahta Kilidi Kurulum** uygulamasında tahta kimliğini koruyarak site adresini değiştirip yönetici onayıyla kaydedebilirsiniz; tahta anahtarı değişmez. Kopyalanan gizli JSON kaydını özel Google tablosunda **BB Kilit → Tahta kaydet** sidebar'ına yapıştırın. İlk sürümde bu kayıt işlemi elle yapılır; public kayıt endpoint'i yoktur. Google projesi/deployment'ı önce hazırlanmalıdır; web deposundaki `google-apps-script/README.md` adımları açıklamaktadır. Yeni paketle mevcut Vercel site adresi de çalışır; Google alternatifi zorunlu değildir.
+
+`tahta-kilit_0.1.8_all.deb` paketini üzerine kurun. Mevcut kullanıcı için yeniden anahtar üretmeyin. Site adresi değiştikten sonra BB Kilit'i başlatıcıdan yeniden açın. Tahta günlük kullanımda internetsizdir; Google tablosuna kaydı girme ve telefonun kod alması internet gerektirir.
 
 ## Kullanım
 

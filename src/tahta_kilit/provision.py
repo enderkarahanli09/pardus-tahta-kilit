@@ -11,6 +11,7 @@ import tempfile
 from urllib.parse import urlsplit
 
 from tahta_kilit.protocol import BOARD_ID_PATTERN
+from tahta_kilit.site_url import validate_site_url
 
 CONFIG_DIR = "/etc/tahta-kilit"
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
@@ -47,24 +48,10 @@ def main():
 
     if not BOARD_ID_PATTERN.fullmatch(args.board_id):
         parser.error("Tahta kimliği A-Z, 0-9 ve tire karakterlerinden oluşmalıdır.")
-    parts = urlsplit(args.site_url)
     try:
-        port = parts.port
-    except ValueError:
-        parser.error("--site-url içindeki bağlantı noktası geçersizdir.")
-    if (
-        args.site_url != args.site_url.strip()
-        or any(ord(character) < 0x21 or ord(character) == 0x7F for character in args.site_url)
-        or parts.scheme != "https"
-        or not parts.hostname
-        or port not in (None, 443)
-        or parts.username
-        or parts.password
-        or parts.path not in ("", "/", "/ac")
-        or parts.query
-        or parts.fragment
-    ):
-        parser.error("--site-url HTTPS olmalı ve query/fragment içermemelidir.")
+        validate_site_url(args.site_url)
+    except ValueError as error:
+        parser.error(str(error))
 
     if os.path.lexists(KEY_PATH) or os.path.lexists(CONFIG_PATH):
         raise SystemExit(

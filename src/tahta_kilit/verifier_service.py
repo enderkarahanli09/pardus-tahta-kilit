@@ -13,6 +13,7 @@ from collections import deque
 from urllib.parse import urlsplit
 
 from tahta_kilit.protocol import BOARD_ID_PATTERN, code_matches, qr_signature
+from tahta_kilit.site_url import validate_site_url
 
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 KEY_PATH = "/etc/tahta-kilit/board.key"
@@ -59,24 +60,7 @@ def read_config():
         raise ValueError("Tahta kimliği yapılandırılmamış.")
     if not isinstance(site_url, str) or len(site_url) > 2048:
         raise ValueError("Web adresi HTTPS olmalıdır.")
-    try:
-        parsed_url = urlsplit(site_url)
-        port = parsed_url.port
-    except ValueError as error:
-        raise ValueError("Web adresi geçersiz.") from error
-    if (
-        site_url != site_url.strip()
-        or any(ord(character) < 0x21 or ord(character) == 0x7F for character in site_url)
-        or parsed_url.scheme != "https"
-        or not parsed_url.hostname
-        or port not in (None, 443)
-        or parsed_url.username
-        or parsed_url.password
-        or parsed_url.path not in ("", "/", "/ac")
-        or parsed_url.query
-        or parsed_url.fragment
-    ):
-        raise ValueError("Web adresi HTTPS olmalı ve yalnız /ac yolu kullanmalıdır.")
+    validate_site_url(site_url)
     return {"board_id": board_id, "site_url": site_url}
 
 

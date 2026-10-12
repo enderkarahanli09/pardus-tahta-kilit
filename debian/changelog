@@ -1,3 +1,11 @@
+tahta-kilit (0.1.8) unstable; urgency=medium
+
+  * Support Google Apps Script HTTPS deployment URLs.
+  * Update the configured site URL without replacing board identity or key.
+  * Adapt setup instructions for private Google board registration.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 15:00:00 +0300
+
 tahta-kilit (0.1.7) unstable; urgency=medium
 
   * Use version 2 QR challenges and six-digit unlock codes.

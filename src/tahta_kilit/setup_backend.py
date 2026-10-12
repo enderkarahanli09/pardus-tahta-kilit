@@ -7,11 +7,14 @@ import os
 import pwd
 import subprocess
 import sys
+import stat
+import tempfile
 from base64 import b64encode
 
 from tahta_kilit import provision
 from tahta_kilit.verifier_service import read_config, read_key
 from tahta_kilit.shortcut_protection import protect_shortcut
+from tahta_kilit.site_url import validate_site_url
 
 
 def configure(arguments):
@@ -27,6 +30,7 @@ def configure(arguments):
         return protect_shortcut(caller, arguments[1], arguments[0] == "--protect-shortcut")
     if len(arguments) not in (2, 3):
         raise ValueError("Tahta kimliği ve HTTPS web adresi gerekiyor.")
+    validate_site_url(arguments[1])
 
     key_exists = os.path.lexists(provision.KEY_PATH)
     config_exists = os.path.lexists(provision.CONFIG_PATH)
@@ -44,6 +48,26 @@ def configure(arguments):
 
     config = read_config()
     key = read_key()
+    if config["board_id"] != arguments[0]:
+        raise ValueError("Mevcut tahta kimliğini değiştirmeyin; aynı kimlikle site adresini güncelleyin.")
+    if config["site_url"] != arguments[1]:
+        directory = os.lstat(provision.CONFIG_DIR)
+        if not stat.S_ISDIR(directory.st_mode) or directory.st_uid != 0 or stat.S_IMODE(directory.st_mode) & 0o022:
+            raise PermissionError("Tahta ayar dizini root tarafından korunmalıdır.")
+        current = os.stat(provision.CONFIG_PATH)
+        config["site_url"] = arguments[1]
+        descriptor, temporary = tempfile.mkstemp(prefix=".site-update-", dir=provision.CONFIG_DIR)
+        try:
+            os.fchown(descriptor, 0, current.st_gid)
+            os.fchmod(descriptor, 0o640)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+                json.dump(config, output, ensure_ascii=False)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(temporary, provision.CONFIG_PATH)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
     # Hiçbir shell kullanılmaz; hesap PKEXEC_UID üzerinden sistemden seçilir.
     subprocess.run(
         ["/usr/sbin/usermod", "-aG", "tahta-kilit", "--", caller.pw_name],
