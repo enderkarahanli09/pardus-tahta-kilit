@@ -7,10 +7,7 @@ import tempfile
 SOURCE = Path("/usr/share/applications/bb-kilit.desktop")
 
 
-def ensure_desktop_shortcut():
-    # Paket kurulumu root ile yapılır; kullanıcının masaüstü kendi oturumunda yazılır.
-    if os.getuid() == 0 or not SOURCE.is_file():
-        return
+def find_desktop_directory():
     home = Path.home()
     try:
         result = subprocess.run(
@@ -22,6 +19,16 @@ def ensure_desktop_shortcut():
         directory = home / "Desktop"
     # HOME çıktısı, XDG'de masaüstünün devre dışı olduğu anlamına gelebilir.
     if not directory.is_absolute() or not directory.is_dir() or directory.resolve() == home.resolve():
+        return None
+    return directory
+
+
+def ensure_desktop_shortcut():
+    # Paket kurulumu root ile yapılır; kullanıcının masaüstü kendi oturumunda yazılır.
+    if os.getuid() == 0 or not SOURCE.is_file():
+        return
+    directory = find_desktop_directory()
+    if directory is None:
         return
     target = directory / "BB Kilit.desktop"
     content = SOURCE.read_bytes()
@@ -29,6 +36,8 @@ def ensure_desktop_shortcut():
         return
     if target.exists():
         existing = target.read_bytes()
+        if target.stat().st_uid == 0:
+            return  # Yönetici tarafından korunan başlatıcıya dokunma.
         if existing != content and b"X-BB-Kilit-Managed=true" not in existing:
             return  # Aynı isimli kullanıcı dosyasını değiştirme.
     temporary = None

@@ -11,6 +11,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
 from tahta_kilit.desktop_shortcut import main as install_desktop_shortcut
+from tahta_kilit.desktop_shortcut import find_desktop_directory
 
 
 class SetupWindow(Gtk.Window):
@@ -42,6 +43,12 @@ class SetupWindow(Gtk.Window):
         self.install = Gtk.Button(label="Kurulumu tamamla / mevcut anahtarı al")
         self.install.connect("clicked", self.on_install)
         box.pack_start(self.install, False, False, 0)
+        self.protect_button = Gtk.Button(label="BB Kilit kısayolunu silinmeye karşı koru")
+        self.protect_button.connect("clicked", self.on_shortcut_protection, True)
+        box.pack_start(self.protect_button, False, False, 0)
+        self.unprotect_button = Gtk.Button(label="BB Kilit kısayolunun korumasını kaldır (yönetici)")
+        self.unprotect_button.connect("clicked", self.on_shortcut_protection, False)
+        box.pack_start(self.unprotect_button, False, False, 0)
         self.status = self.add_text(box, "Kurulum tamamlandıktan sonra anahtarı Vercel'e ekleyip oturumu kapatıp açın.")
         self.key = self.add_entry(box, "Vercel BOARD_KEYS_JSON için kayıt (gizli)", "")
         self.key.set_editable(False)
@@ -85,7 +92,26 @@ class SetupWindow(Gtk.Window):
         self.secret_json = None
         self.status.set_text("Yönetici onayı bekleniyor… Sistem parola penceresini kontrol edin.")
         arguments = [self.board.get_text(), self.site.get_text()]
+        directory = find_desktop_directory()
+        if directory is not None:
+            arguments.append(str(directory))
         threading.Thread(target=self.run_helper, args=(arguments,), daemon=True).start()
+
+    def on_shortcut_protection(self, _button, protect):
+        if self.busy:
+            return
+        install_desktop_shortcut()
+        directory = find_desktop_directory()
+        if directory is None:
+            self.status.set_text("Masaüstü klasörü bulunamadı. Yönetici XDG masaüstü ayarını kontrol etsin.")
+            return
+        self.busy = True
+        self.install.set_sensitive(False)
+        self.protect_button.set_sensitive(False)
+        self.unprotect_button.set_sensitive(False)
+        self.status.set_text("Kısayol için yönetici onayı bekleniyor…")
+        action = "--protect-shortcut" if protect else "--unprotect-shortcut"
+        threading.Thread(target=self.run_helper, args=([action, str(directory)],), daemon=True).start()
 
     def run_helper(self, arguments):
         try:
@@ -107,10 +133,15 @@ class SetupWindow(Gtk.Window):
     def complete(self, result, error):
         self.busy = False
         self.install.set_sensitive(True)
+        self.protect_button.set_sensitive(True)
+        self.unprotect_button.set_sensitive(True)
         self.board.set_sensitive(True)
         self.site.set_sensitive(True)
         if error:
             self.status.set_text(error)
+            return False
+        if "boardId" not in result:
+            self.status.set_text("BB Kilit kısayolu silinmeye karşı korundu." if result["shortcutProtected"] else "Kısayol koruması yönetici onayıyla kaldırıldı. Şimdi dosya yöneticisinden silebilirsiniz.")
             return False
         self.board.set_text(result["boardId"])
         self.site.set_text(result["siteUrl"])
@@ -118,7 +149,8 @@ class SetupWindow(Gtk.Window):
         self.key.set_text(self.secret_json)
         self.copy.set_sensitive(True)
         prefix = "Mevcut anahtar korundu. " if result["existing"] else "Tahta anahtarı oluşturuldu. "
-        self.status.set_text(prefix + "Kurulum tamamlandı. Vercel'e ekleyip yeniden dağıtın; ardından Pardus oturumunu kapatıp açın.")
+        protection = " BB Kilit kısayolu korundu." if result.get("shortcutProtected") else " Kısayol korunamadı; dosya sistemi/yönetici ayarlarını kontrol edin."
+        self.status.set_text(prefix + "Kurulum tamamlandı. Vercel'e ekleyip yeniden dağıtın; ardından Pardus oturumunu kapatıp açın." + protection)
         return False
 
     def on_copy(self, _button):

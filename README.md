@@ -49,6 +49,14 @@ Pardus Tahta Kilidi, ETAP akıllı tahtada oturum açıldığında açılan tam 
 
 ## Kolay kurulum
 
+### v0.1.6 — yönetici onaylı BB Kilit koruması
+
+`tahta-kilit_0.1.6_all.deb` paketini üzerine kurup oturumu kapatıp açın. **Tahta Kilidi Kurulum** uygulamasını açın ve **BB Kilit kısayolunu silinmeye karşı koru** düğmesine basın. Pardus polkit penceresinde yetkili yönetici doğrulamasını tamamlayın. İlk kurulumda bu koruma, kurulumun yönetici onayıyla da uygulanır. **Kısayol korundu** mesajını görmeden silme engeli kurulmuş kabul etmeyin.
+
+Linux immutable dosya özelliğini destekleyen dosya sistemlerinde (tipik yerel ext4 kurulumlarında) başlatıcı root sahipli olur; silme, taşıma ve değiştirme engellenir. Özellik desteklenmezse hata/korunamadı mesajı gösterilir; normal dosya izinleri yeterli koruma gibi sunulmaz. Dosya yöneticisi silme denemesinde **izin reddedildi** gösterebilir; otomatik parola penceresi açılması garanti edilmez. Yönetici silmek için **Tahta Kilidi Kurulum → BB Kilit kısayolunun korumasını kaldır (yönetici)** düğmesini kullanıp sistem doğrulamasını tamamlar; ardından kısayolu silebilir. Öğretmen web kodu bu işlem için yönetici parolası değildir; yönetici parola/onay politikasını Pardus belirler.
+
+Kısayol korumasını kaldırmadan kullanıcı ev klasörünü silmeyin veya masaüstünü taşımayın. Paket kaldırılmadan önce korumayı bu uygulamadan kaldırın; paket kullanıcı masaüstündeki immutable dosyayı otomatik silmez. Korumalı eski başlatıcı güncellemede aynı başlatma yolunu kullanır. Bu özellik masaüstü klasörünü gizlemeyi/yeniden adlandırmayı, alternatif kullanıcı oturumlarını veya işletim sistemi yöneticisini bütünüyle kısıtlayan kiosk politikasının yerine geçmez.
+
 ### v0.1.5 — BB Kilit masaüstü kısayolu
 
 `tahta-kilit_0.1.5_all.deb` dosyasını mevcut kurulumun üzerine çift tıklayarak kurun; oturumu bir kez kapatıp açın. Kullanıcının masaüstüne **BB Kilit** kısayolu eklenir; uygulama menüsünde de **BB Kilit** bulunur. İlk kurulum sihirbazı açıldığında da kısayol oluşturulur. Masaüstü klasörü XDG ayarından bulunur; masaüstü devre dışıysa menü girdisi kullanılabilir. Bazı masaüstleri ilk kullanımda **Başlatmaya izin ver / Güvenilir olarak işaretle** onayı isteyebilir.

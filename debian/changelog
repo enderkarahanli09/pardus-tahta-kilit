@@ -1,3 +1,10 @@
+tahta-kilit (0.1.6) unstable; urgency=medium
+
+  * Add administrator-authorized immutable desktop launcher protection.
+  * Add GUI actions to protect and remove protection without a terminal.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 13:30:00 +0300
+
 tahta-kilit (0.1.5) unstable; urgency=medium
 
   * Add BB Kilit application and per-user desktop launcher.

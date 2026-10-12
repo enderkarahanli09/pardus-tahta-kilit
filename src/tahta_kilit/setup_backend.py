@@ -11,6 +11,7 @@ from base64 import b64encode
 
 from tahta_kilit import provision
 from tahta_kilit.verifier_service import read_config, read_key
+from tahta_kilit.shortcut_protection import protect_shortcut
 
 
 def configure(arguments):
@@ -22,7 +23,9 @@ def configure(arguments):
     caller = pwd.getpwuid(int(caller_text))
     if caller.pw_uid < 1000 or caller.pw_shell in ("/usr/sbin/nologin", "/bin/false"):
         raise PermissionError("Kurulumu standart grafik oturum hesabında açın.")
-    if len(arguments) != 2:
+    if len(arguments) == 2 and arguments[0] in ("--protect-shortcut", "--unprotect-shortcut"):
+        return protect_shortcut(caller, arguments[1], arguments[0] == "--protect-shortcut")
+    if len(arguments) not in (2, 3):
         raise ValueError("Tahta kimliği ve HTTPS web adresi gerekiyor.")
 
     key_exists = os.path.lexists(provision.KEY_PATH)
@@ -50,13 +53,19 @@ def configure(arguments):
         ["/usr/bin/systemctl", "enable", "--now", "tahta-kilit-verifier.service"],
         check=True, capture_output=True, timeout=30,
     )
-    return {
+    result = {
         "boardId": config["board_id"],
         "siteUrl": config["site_url"],
         "sessionUser": caller.pw_name,
         "boardKeysEntry": {config["board_id"]: b64encode(key).decode("ascii")},
         "existing": key_exists,
     }
+    if len(arguments) == 3:
+        try:
+            result.update(protect_shortcut(caller, arguments[2]))
+        except (OSError, ValueError, PermissionError):
+            result["shortcutProtected"] = False
+    return result
 
 
 def main():
