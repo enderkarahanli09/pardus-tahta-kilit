@@ -27,7 +27,8 @@ class KeyboardGuard:
             self.state = "failed"
             return self.state
         try:
-            result = seat.grab(native, Gdk.SeatCapabilities.ALL, False, None, None, None, None)
+            # Fare/dokunma olaylarını yakalama: GTK düğmelerine normal yoldan ulaşmalı.
+            result = seat.grab(native, Gdk.SeatCapabilities.KEYBOARD, False, None, None, None, None)
         except (RuntimeError, TypeError, ValueError):
             self.state = "failed"
             return self.state

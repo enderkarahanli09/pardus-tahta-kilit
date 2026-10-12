@@ -1,3 +1,9 @@
+# BB Kilit 0.1.13 — Dokunmatik giriş düzeltmesi
+
+0.1.12 içindeki tüm giriş cihazlarını yakalama, dokunmatik/fare olaylarını düğmelerden uzaklaştırabiliyordu. 0.1.13 yalnız klavyeyi yakalar; dokunma ve fare olayları GTK düğmelerine normal biçimde ulaşır. Tam ekran, oturum açılışında otomatik başlangıç, fiziksel klavye filtreleme ve doğru koddan sonra gizlenme korunur.
+
+Güncellemeyi mevcut kurulumun üzerine yükleyin ve oturumu kapatıp açın veya yeniden başlatın. Eski açık sürecin yeni kodla yeniden başlaması gerekir. Anahtar ve Google kaydı korunur. Gerçek tahta dokunmatiğinde henüz doğrulanmadı.
+
 # BB Kilit 0.1.12 — Tam ekran oturum kilidi
 
 0.1.12, normal pencere kararını değiştirir: oturum açıldığında otomatik başlar, tam ekran ve üstte açılır, pencere kapatma düğmesi yoktur. Fiziksel klavye kilitliyken tüketilir; kod ekrandaki tuş takımından girilir. Doğru koddan sonra klavye/fare yakalama bırakılır, arayüz gizlenir ve süre dolunca geri gelmez. BB Kilit başlatıcısı tekrar kilitleyebilir. UI süreci kapanırsa kullanıcı systemd servisi yeniden başlatır.
