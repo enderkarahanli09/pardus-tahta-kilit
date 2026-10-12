@@ -39,6 +39,7 @@ chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/start-ui.sh"
 sed 's/\r$//' "$PROJECT_DIR/share/setup-helper" > "$PACKAGE_ROOT/usr/lib/tahta-kilit/setup-helper"
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/setup-helper"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-setup.desktop" "$PACKAGE_ROOT/usr/share/applications/tahta-kilit-setup.desktop"
+install -m 0644 "$PROJECT_DIR/share/bb-kilit.desktop" "$PACKAGE_ROOT/usr/share/applications/bb-kilit.desktop"
 install -m 0644 "$PROJECT_DIR/share/org.tahtakilit.setup.policy" "$PACKAGE_ROOT/usr/share/polkit-1/actions/org.tahtakilit.setup.policy"
 
 cat > "$CONTROL_DIR/control" <<EOF
@@ -47,7 +48,7 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: all
-Depends: adduser, passwd, systemd, pkexec, policykit-1-gnome | polkit-kde-agent-1, python3, python3-gi, gir1.2-gtk-3.0, python3-qrcode, python3-pil
+Depends: adduser, passwd, systemd, pkexec, policykit-1-gnome | polkit-kde-agent-1, python3, python3-gi, gir1.2-gtk-3.0, python3-qrcode, python3-pil, xdg-user-dirs
 Maintainer: enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>
 Description: Pardus ETAP offline smartboard lock screen
  Python GTK 3 lock screen and local Unix socket verifier for teacher unlock codes.

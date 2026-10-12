@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 
+# Kullanıcı masaüstü oturumunda BB Kilit başlatıcısını oluştur/güncelle.
+/usr/bin/python3 -I -m tahta_kilit.desktop_shortcut || true
+
 # İlk kurulumu kullanıcı oturumunda göster; paket postinst içinde GUI açılmaz.
 if [ ! -r /etc/tahta-kilit/config.json ]; then
     exec /usr/bin/python3 -I -m tahta_kilit.setup_gui

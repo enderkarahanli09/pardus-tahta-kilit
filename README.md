@@ -49,6 +49,12 @@ Pardus Tahta Kilidi, ETAP akıllı tahtada oturum açıldığında açılan tam 
 
 ## Kolay kurulum
 
+### v0.1.5 — BB Kilit masaüstü kısayolu
+
+`tahta-kilit_0.1.5_all.deb` dosyasını mevcut kurulumun üzerine çift tıklayarak kurun; oturumu bir kez kapatıp açın. Kullanıcının masaüstüne **BB Kilit** kısayolu eklenir; uygulama menüsünde de **BB Kilit** bulunur. İlk kurulum sihirbazı açıldığında da kısayol oluşturulur. Masaüstü klasörü XDG ayarından bulunur; masaüstü devre dışıysa menü girdisi kullanılabilir. Bazı masaüstleri ilk kullanımda **Başlatmaya izin ver / Güvenilir olarak işaretle** onayı isteyebilir.
+
+**BB Kilit** çift tıklandığında mevcut arayüz servisi yeniden başlatılır ve QR/kod giriş ekranı yeniden kilitli olarak açılır. Aynı anda ikinci bir arayüz oluşturulmaz. Öğretmen tahtayı açtıktan sonra tekrar kilitlemek için de bu kısayolu kullanabilir. QR üretimi ve tahtada doğrulama internetsiz çalışır; öğretmen telefonundaki web sitesi internet kullanır. Anahtarlar ve Vercel eşlemesi korunur. Kurulum tamamlanmamışsa kısayol ilk kurulum sihirbazını gösterir.
+
 ### v0.1.4 — kilitliyken masaüstü kısayolları
 
 Alt+F1 gibi masaüstü kısayolları GTK pencere olayından önce pencere yöneticisi tarafından yakalanabilir. v0.1.4, kilit penceresi ekrana gelince `Gdk.Seat.grab` ile yalnız klavye girişini bu pencereye yönlendirir; fare ve dokunmatik girişi yakalamaz. Yakalama kesilirse tekrar denenir. Doğru kod sonrası klavye, pencere gizlenmeden önce serbest bırakılır; öğretmenin normal klavye kullanımı geri gelir. Masaüstü kısayol ayarları kalıcı olarak değiştirilmez.

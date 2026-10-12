@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BB Kilit
+Comment=Tahtanın QR ve kod giriş ekranını aç
+Exec=/usr/lib/tahta-kilit/start-ui.sh
+Icon=system-lock-screen
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+X-BB-Kilit-Managed=true

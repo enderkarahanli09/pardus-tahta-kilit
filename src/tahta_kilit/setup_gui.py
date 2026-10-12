@@ -10,11 +10,13 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
+from tahta_kilit.desktop_shortcut import main as install_desktop_shortcut
 
 
 class SetupWindow(Gtk.Window):
     def __init__(self):
         super().__init__(title="Tahta Kilidi Kurulum")
+        install_desktop_shortcut()
         self.set_default_size(600, 460)
         self.set_border_width(24)
         self.connect("destroy", Gtk.main_quit)
