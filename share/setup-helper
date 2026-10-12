@@ -1,0 +1,5 @@
+#!/usr/bin/python3 -I
+"""Polkit tarafından yetkilendirilmiş, root sahipli kurulum giriş noktası."""
+from tahta_kilit.setup_backend import main
+
+raise SystemExit(main())

@@ -19,6 +19,8 @@ mkdir -p \
     "$PACKAGE_ROOT/usr/lib/python3/dist-packages/tahta_kilit" \
     "$PACKAGE_ROOT/usr/lib/tahta-kilit" \
     "$PACKAGE_ROOT/etc/xdg/autostart" \
+    "$PACKAGE_ROOT/usr/share/applications" \
+    "$PACKAGE_ROOT/usr/share/polkit-1/actions" \
     "$PACKAGE_ROOT/lib/systemd/system" \
     "$PACKAGE_ROOT/lib/systemd/user" \
     "$OUTPUT_DIR"
@@ -34,6 +36,10 @@ install -m 0644 "$PROJECT_DIR/share/tahta-kilit.desktop" \
 sed 's/\r$//' "$PROJECT_DIR/share/start-ui.sh" > \
     "$PACKAGE_ROOT/usr/lib/tahta-kilit/start-ui.sh"
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/start-ui.sh"
+sed 's/\r$//' "$PROJECT_DIR/share/setup-helper" > "$PACKAGE_ROOT/usr/lib/tahta-kilit/setup-helper"
+chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/setup-helper"
+install -m 0644 "$PROJECT_DIR/share/tahta-kilit-setup.desktop" "$PACKAGE_ROOT/usr/share/applications/tahta-kilit-setup.desktop"
+install -m 0644 "$PROJECT_DIR/share/org.tahtakilit.setup.policy" "$PACKAGE_ROOT/usr/share/polkit-1/actions/org.tahtakilit.setup.policy"
 
 cat > "$CONTROL_DIR/control" <<EOF
 Package: tahta-kilit
@@ -41,8 +47,8 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: all
-Depends: adduser, systemd, python3, python3-gi, gir1.2-gtk-3.0, python3-qrcode, python3-pil
-Maintainer: Okul BT Yöneticisi <bt@example.invalid>
+Depends: adduser, passwd, systemd, pkexec, policykit-1-gnome | polkit-kde-agent-1, python3, python3-gi, gir1.2-gtk-3.0, python3-qrcode, python3-pil
+Maintainer: enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>
 Description: Pardus ETAP offline smartboard lock screen
  Python GTK 3 lock screen and local Unix socket verifier for teacher unlock codes.
 EOF

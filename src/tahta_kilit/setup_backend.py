@@ -1,0 +1,80 @@
+"""Sınırlı polkit kurulum işlemi; yalnız GUI çağıranının oturumunu yapılandırır."""
+
+import contextlib
+import io
+import json
+import os
+import pwd
+import subprocess
+import sys
+from base64 import b64encode
+
+from tahta_kilit import provision
+from tahta_kilit.verifier_service import read_config, read_key
+
+
+def configure(arguments):
+    if os.geteuid() != 0:
+        raise PermissionError("Kurulum için yönetici yetkisi gerekiyor.")
+    caller_text = os.environ.get("PKEXEC_UID", "")
+    if not caller_text.isascii() or not caller_text.isdecimal():
+        raise PermissionError("Kurulumu uygulama menüsünden açın.")
+    caller = pwd.getpwuid(int(caller_text))
+    if caller.pw_uid < 1000 or caller.pw_shell in ("/usr/sbin/nologin", "/bin/false"):
+        raise PermissionError("Kurulumu standart grafik oturum hesabında açın.")
+    if len(arguments) != 2:
+        raise ValueError("Tahta kimliği ve HTTPS web adresi gerekiyor.")
+
+    key_exists = os.path.lexists(provision.KEY_PATH)
+    config_exists = os.path.lexists(provision.CONFIG_PATH)
+    if key_exists != config_exists:
+        raise ValueError("Kurulum dosyaları eksik. Mevcut dosyaları silmeden yöneticinizle kontrol edin.")
+    if not key_exists:
+        previous_argv = sys.argv
+        try:
+            sys.argv = ["provision", "--board-id", arguments[0], "--site-url", arguments[1]]
+            # Provision aracının açıklamalarını gizli JSON yanıtına karıştırma.
+            with contextlib.redirect_stdout(io.StringIO()):
+                provision.main()
+        finally:
+            sys.argv = previous_argv
+
+    config = read_config()
+    key = read_key()
+    # Hiçbir shell kullanılmaz; hesap PKEXEC_UID üzerinden sistemden seçilir.
+    subprocess.run(
+        ["/usr/sbin/usermod", "-aG", "tahta-kilit", "--", caller.pw_name],
+        check=True, capture_output=True, timeout=30,
+    )
+    subprocess.run(
+        ["/usr/bin/systemctl", "enable", "--now", "tahta-kilit-verifier.service"],
+        check=True, capture_output=True, timeout=30,
+    )
+    return {
+        "boardId": config["board_id"],
+        "siteUrl": config["site_url"],
+        "sessionUser": caller.pw_name,
+        "boardKeysEntry": {config["board_id"]: b64encode(key).decode("ascii")},
+        "existing": key_exists,
+    }
+
+
+def main():
+    try:
+        result = configure(sys.argv[1:])
+    except SystemExit:
+        print("Tahta kimliği veya HTTPS web adresi geçersiz.", file=sys.stderr)
+        return 1
+    except (PermissionError, ValueError, KeyError, OSError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    except (subprocess.SubprocessError, RuntimeError):
+        print("Oturum grubu veya doğrulama servisi ayarlanamadı. Yönetici kurulumu kontrol etsin.", file=sys.stderr)
+        return 1
+    # Sır yalnız yetkilendirilmiş GUI'nin özel stdout borusuna gönderilir.
+    print(json.dumps(result, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

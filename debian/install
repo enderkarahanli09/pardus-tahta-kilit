@@ -3,3 +3,6 @@ share/tahta-kilit-verifier.service lib/systemd/system
 share/tahta-kilit-ui.service lib/systemd/user
 share/start-ui.sh usr/lib/tahta-kilit
 share/tahta-kilit.desktop etc/xdg/autostart
+share/tahta-kilit-setup.desktop usr/share/applications
+share/org.tahtakilit.setup.policy usr/share/polkit-1/actions
+share/setup-helper usr/lib/tahta-kilit

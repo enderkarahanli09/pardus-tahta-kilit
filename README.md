@@ -49,6 +49,21 @@ Pardus Tahta Kilidi, ETAP akıllı tahtada oturum açıldığında açılan tam 
 
 ## Kolay kurulum
 
+### Terminal kullanmadan kurulum (v0.1.2 ve sonrası)
+
+1. GitHub Releases'den `tahta-kilit_0.1.2_all.deb` dosyasını indirin, Pardus'ta çift tıklayıp paket yöneticisiyle kurun. Ayrı `.sh` dosyası gerekmez.
+2. Uygulama menüsünden **Tahta Kilidi Kurulum** penceresini açın. Yapılandırılmamış oturumda bir sonraki girişte bu pencere otomatik açılır.
+3. Tahta kimliğini ve öğretmen web adresini girin. **Kurulumu tamamla / mevcut anahtarı al** düğmesine basın. Sistem, yetkili yöneticinin parolasını grafik pencerede ister; terminal açılmaz.
+4. Sihirbaz yerel anahtarı oluşturur, sihirbazı açan standart oturum hesabını `tahta-kilit` grubuna ekler ve doğrulama servisini etkinleştirir. Mevcut yapılandırma ve anahtar varsa korunur; girilen yeni kimlik/adres uygulanmaz, kayıtlı değerler gösterilir.
+5. **Vercel kaydını kopyala** düğmesiyle tahta kimliği/anahtar eşlemesini kopyalayın. Vercel projesinin Production `BOARD_KEYS_JSON` değişkeninde mevcut kayıtları koruyarak bu eşlemeyi ekleyin ve yeniden dağıtın. Terminalde `base64` çalıştırmak gerekmez.
+6. Vercel eşleştirmesi tamamlanınca Pardus oturumunu kapatıp açın. Grup üyeliği yeni oturumda geçerli olur ve kilit ekranı otomatik başlar.
+
+Anahtar varsayılan olarak maskelenir. Kopyalanan mevcut pano içeriği 60 saniye sonunda veya pencere normal biçimde kapanınca temizlenir; pano geçmişi tutan başka uygulamalar ayrı kopya saklayabilir. Gizli anahtarı sohbet veya GitHub'da paylaşmayın. Sihirbazı yeniden açıp yönetici doğrulamasıyla aynı anahtarı tekrar alabilirsiniz.
+
+Python/GTK, QR ve polkit bağımlılıkları eksikse ilk kurulumda Pardus paket deposuna internet erişimi veya önceden hazırlanmış yerel paketler gerekir. Günlük QR üretimi ve tahta kod doğrulaması çevrimdışıdır. Paket kurulumu sırasında root hesabında grafik uygulama açılmaz; kullanıcı sihirbazı kendi oturumunda açar. Bu sürüm pilot paketidir; gerçek ETAP kiosk/kısayol testleri ayrıca yapılmalıdır.
+
+### Terminal kullanan eski kurulum yöntemi
+
 Bu yöntem GitHub Releases'den alınan `.deb` ile bu depodaki yardımcı betiği kullanır. Başka bir internet bağlantılı bilgisayarda dosyaları indirip USB ile tahtaya aktarabilirsiniz. Uygulamanın günlük çalışması için internet gerekmez; ilk kurulumdaki sistem bağımlılıkları için Pardus paket deposu bağlantısı gerekebilir.
 
 ### 1. İndirme

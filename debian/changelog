@@ -1,3 +1,10 @@
+tahta-kilit (0.1.2) unstable; urgency=medium
+
+  * Add a GTK setup wizard with narrowly scoped administrator authorization.
+  * Configure the session and export the board key without terminal commands.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 12:00:00 +0300
+
 tahta-kilit (0.1.1) unstable; urgency=medium
 
   * Harden local verifier key-file checks, request handling and service sandboxing.
