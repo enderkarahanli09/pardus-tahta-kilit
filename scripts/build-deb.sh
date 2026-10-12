@@ -38,9 +38,9 @@ sed 's/\r$//' "$PROJECT_DIR/share/setup-helper" > "$PACKAGE_ROOT/usr/lib/tahta-k
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/setup-helper"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-setup.desktop" "$PACKAGE_ROOT/usr/share/applications/tahta-kilit-setup.desktop"
 install -m 0644 "$PROJECT_DIR/share/bb-kilit.desktop" "$PACKAGE_ROOT/usr/share/applications/bb-kilit.desktop"
-if [ -f "$PROJECT_DIR/share/assets/borusan-mtal-logo.jpg" ]; then
-    install -m 0644 "$PROJECT_DIR/share/assets/borusan-mtal-logo.jpg" \
-        "$PACKAGE_ROOT/usr/share/tahta-kilit/borusan-mtal-logo.jpg"
+if [ -f "$PROJECT_DIR/share/assets/borusan-mtal-logo.png" ]; then
+    install -m 0644 "$PROJECT_DIR/share/assets/borusan-mtal-logo.png" \
+        "$PACKAGE_ROOT/usr/share/tahta-kilit/borusan-mtal-logo.png"
 fi
 install -m 0644 "$PROJECT_DIR/share/org.tahtakilit.setup.policy" "$PACKAGE_ROOT/usr/share/polkit-1/actions/org.tahtakilit.setup.policy"
 

@@ -1,3 +1,9 @@
+tahta-kilit (0.1.10) unstable; urgency=medium
+
+  * Use a transparent PNG school badge without rectangular background.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 16:30:00 +0300
+
 tahta-kilit (0.1.9) unstable; urgency=medium
 
   * Brand the desktop interface as BB Kilit / Borusan Bilisim Kilit.

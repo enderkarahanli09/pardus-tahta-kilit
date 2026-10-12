@@ -15,7 +15,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
 MAX_CODE_DIGITS = 6
-SCHOOL_LOGO_PATH = "/usr/share/tahta-kilit/borusan-mtal-logo.jpg"
+SCHOOL_LOGO_PATH = "/usr/share/tahta-kilit/borusan-mtal-logo.png"
 TEST_MODE = os.environ.get("TAHTA_KILIT_TEST_MODE") == "1"
 
 COLORS = {
