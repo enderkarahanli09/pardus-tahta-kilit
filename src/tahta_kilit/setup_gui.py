@@ -16,7 +16,20 @@ from tahta_kilit.desktop_shortcut import find_desktop_directory
 
 class SetupWindow(Gtk.Window):
     def __init__(self):
-        super().__init__(title="Tahta Kilidi Kurulum")
+        super().__init__(title="BB Kilit Kurulum")
+        provider = Gtk.CssProvider()
+        provider.load_from_data(b"""
+            window { background: #0b0b0d; color: #ffffff; }
+            label { color: #ffffff; }
+            entry { background: #19191c; color: #ffffff; border: 1px solid #424247;
+                    border-radius: 8px; padding: 8px; }
+            entry:focus { border-color: #ff8a26; }
+            button { background: #242428; background-image: none; color: #ffffff;
+                     border: 1px solid #424247; border-radius: 8px; padding: 10px; }
+            button:hover { background: #c24c06; border-color: #ff8a26; }
+            button:disabled { color: #96969c; }
+        """)
+        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         install_desktop_shortcut()
         self.set_default_size(600, 460)
         self.set_border_width(24)
@@ -28,7 +41,7 @@ class SetupWindow(Gtk.Window):
         self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.add(box)
-        self.add_text(box, "Tahta Kilidi ilk kurulumu", bold=True)
+        self.add_text(box, "BB Kilit — Borusan Bilişim Kilit", bold=True)
         self.add_text(box, "Yönetici doğrulaması sistem penceresinde yapılır. Mevcut tahta anahtarı değiştirilmez.")
         self.add_text(box, "Oturum hesabı: " + pwd.getpwuid(os.getuid()).pw_name)
         self.board = self.add_entry(box, "Tahta kimliği (örnek: ETAP-01)", "ETAP-01")

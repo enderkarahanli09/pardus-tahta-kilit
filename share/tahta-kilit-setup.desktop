@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Tahta Kilidi Kurulum
-Comment=Tahta kimliği, yerel anahtar ve otomatik başlangıcı ayarla
+Name=BB Kilit Kurulum
+Comment=Borusan Bilişim Kilit kimliğini, anahtarını ve kod sitesini ayarla
 Exec=/usr/bin/python3 -I -m tahta_kilit.setup_gui
 Icon=preferences-system
 Terminal=false

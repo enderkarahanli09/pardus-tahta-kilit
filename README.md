@@ -1,8 +1,12 @@
-# BB Kilit — Pardus 0.1.8
+# BB Kilit — Borusan Bilişim Kilit 0.1.9
+
+## 0.1.9 üzerine güncelleme ve yeni görsel düzen
+
+`tahta-kilit_0.1.9_all.deb` dosyasını mevcut kurulumun üzerine kurun, ardından BB Kilit uygulamasını başlatıcıdan yeniden açın. Tahta anahtarı ve Google site adresi korunur. Küçük ekranlarda içerik kaydırılabilir. Uygulama adı **BB Kilit**, açılımı **Borusan Bilişim Kilit** olarak gösterilir. Ana arayüz siyah arka plan, turuncu vurgu ve beyaz metin kullanır. QR siyah-beyaz bırakılır; kod tuş takımı koyu renk, giriş düğmesi turuncudur. Okulun Instagram profilindeki yuvarlak logosu yerel paket varlığı olarak `/usr/share/tahta-kilit/borusan-mtal-logo.jpg` konumundan yüklenir; logo için internet gerekmez. Kaynak dosya `share/assets/borusan-mtal-logo.jpg` olarak eklenir. Logo kullanıcı tarafından belirtilen https://www.instagram.com/borusanasimkocabiyikmtal/ profilinden alınmıştır; üstte ortalanır. Paket logo dosyasını içerir. Profil görseli 100×100 pikseldir ve arayüzde oranı korunarak 80×80 gösterilir. Sağ alt genişletme alanı sonraki ekleme için boş bırakılmıştır. Kurulum menüsünün görünen adı artık **BB Kilit Kurulum** olur.
 
 ## Google Apps Script ile tahta kaydı
 
-0.1.8, `https://script.google.com/macros/s/<deployment-id>/exec` biçimindeki kod sitesi adresini destekler. **Tahta Kilidi Kurulum** uygulamasında tahta kimliğini koruyarak site adresini değiştirip yönetici onayıyla kaydedebilirsiniz; tahta anahtarı değişmez. Kopyalanan gizli JSON kaydını özel Google tablosunda **BB Kilit → Tahta kaydet** sidebar'ına yapıştırın. İlk sürümde bu kayıt işlemi elle yapılır; public kayıt endpoint'i yoktur. Google projesi/deployment'ı önce hazırlanmalıdır; web deposundaki `google-apps-script/README.md` adımları açıklamaktadır. Yeni paketle mevcut Vercel site adresi de çalışır; Google alternatifi zorunlu değildir.
+0.1.8, `https://script.google.com/macros/s/<deployment-id>/exec` biçimindeki kod sitesi adresini destekler. **BB Kilit Kurulum** uygulamasında tahta kimliğini koruyarak site adresini değiştirip yönetici onayıyla kaydedebilirsiniz; tahta anahtarı değişmez. Kopyalanan gizli JSON kaydını özel Google tablosunda **BB Kilit → Tahta kaydet** sidebar'ına yapıştırın. İlk sürümde bu kayıt işlemi elle yapılır; public kayıt endpoint'i yoktur. Google projesi/deployment'ı önce hazırlanmalıdır; web deposundaki `google-apps-script/README.md` adımları açıklamaktadır. Yeni paketle mevcut Vercel site adresi de çalışır; Google alternatifi zorunlu değildir.
 
 `tahta-kilit_0.1.8_all.deb` paketini üzerine kurun. Mevcut kullanıcı için yeniden anahtar üretmeyin. Site adresi değiştikten sonra BB Kilit'i başlatıcıdan yeniden açın. Tahta günlük kullanımda internetsizdir; Google tablosuna kaydı girme ve telefonun kod alması internet gerektirir.
 
@@ -26,7 +30,7 @@ Tahta anahtarı, kimliği ve web adresi korunur; Vercel kaydını yeniden ekleme
 ## İlk kurulum
 
 1. `.deb` dosyasını grafik paket yöneticisiyle kurun. Eksik Python/GTK/QR/XDG bağımlılıkları için Pardus deposuna erişim gerekebilir.
-2. **Tahta Kilidi Kurulum** sihirbazını açın. Benzersiz tahta kimliği ve HTTPS site adresini girin.
+2. **BB Kilit Kurulum** sihirbazını açın. Benzersiz tahta kimliği ve HTTPS site adresini girin.
 3. Sistem yönetici doğrulamasını tamamlayın. 32 bayt anahtar oluşturulur ve root izinleriyle saklanır.
 4. Gizli `BOARD_KEYS_JSON` kaydını Vercel Production'a ekleyin, yeniden dağıtın. Mevcut diğer tahta kayıtlarını koruyun; anahtarı paylaşmayın.
 5. Kullanıcı grubunun etkinleşmesi için oturumu kapatıp açın; BB Kilit'i elle açın.
@@ -50,7 +54,7 @@ Yanlış/eski/yeniden kullanılmış kod reddedilir. Hatalı denemelerde 30/60 s
 
 ## BB Kilit kısayol koruması
 
-0.1.6'daki yönetici onaylı koruma korunur. **Tahta Kilidi Kurulum → BB Kilit kısayolunu silinmeye karşı koru** ile etkinleştirin. Linux immutable destekleyen dosya sistemlerinde silme/değiştirme/taşıma engellenir. **Kısayol korundu** mesajını görmeden etkin kabul etmeyin. Desteklenmeyen dosya sisteminde hata gösterilir.
+0.1.6'daki yönetici onaylı koruma korunur. **BB Kilit Kurulum → BB Kilit kısayolunu silinmeye karşı koru** ile etkinleştirin. Linux immutable destekleyen dosya sistemlerinde silme/değiştirme/taşıma engellenir. **Kısayol korundu** mesajını görmeden etkin kabul etmeyin. Desteklenmeyen dosya sisteminde hata gösterilir.
 
 Silmek/paketi kaldırmak/masaüstünü taşımak için önce **BB Kilit kısayolunun korumasını kaldır (yönetici)** düğmesiyle sistem yönetici onayını tamamlayın. Dosya yöneticisinin normal Sil işlemi parola penceresi yerine izin hatası gösterebilir. Bu koruma işletim sistemi yöneticisini, masaüstünün gizlenmesini veya alternatif oturumları engellemez.
 

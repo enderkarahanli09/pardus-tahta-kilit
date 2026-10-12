@@ -3,8 +3,8 @@
 <policyconfig>
   <vendor>Tahta Kilidi</vendor>
   <action id="org.tahtakilit.setup">
-    <description>Tahta Kilidi ilk kurulumunu tamamla</description>
-    <message>Tahta Kilidi kurulumu ve anahtar aktarımı için yönetici doğrulaması gerekiyor.</message>
+    <description>BB Kilit kurulumunu tamamla</description>
+    <message>BB Kilit kurulumu ve anahtar aktarımı için yönetici doğrulaması gerekiyor.</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>

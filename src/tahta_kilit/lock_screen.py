@@ -15,15 +15,16 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
 MAX_CODE_DIGITS = 6
+SCHOOL_LOGO_PATH = "/usr/share/tahta-kilit/borusan-mtal-logo.jpg"
 TEST_MODE = os.environ.get("TAHTA_KILIT_TEST_MODE") == "1"
 
 COLORS = {
-    "background": "#101827",
-    "panel": "#1b2940",
-    "primary": "#2563eb",
-    "text": "#f8fafc",
-    "muted": "#b8c5d9",
-    "danger": "#fecaca",
+    "background": "#0b0b0d",
+    "panel": "#19191c",
+    "primary": "#c24c06",
+    "text": "#ffffff",
+    "muted": "#c8c8ce",
+    "danger": "#ffb4ab",
 }
 
 
@@ -89,7 +90,7 @@ class LockScreen:
         self.seconds_left = 0
 
         self.window = Gtk.Window(title="BB Kilit")
-        self.window.set_default_size(860, 650)
+        self.window.set_default_size(940, 900)
         self.window.set_position(Gtk.WindowPosition.CENTER)
         self.window.connect("delete-event", self.on_delete)
         self.window.connect("key-press-event", self.on_key_press)
@@ -104,18 +105,26 @@ class LockScreen:
     def apply_css(self):
         css = """
         window, .screen { background-color: %(background)s; color: %(text)s; }
-        .panel { background-color: %(panel)s; border-radius: 22px; padding: 28px; }
-        .title { color: %(text)s; font-size: 30px; font-weight: 700; }
+        .panel { background-color: %(panel)s; border: 1px solid #333337;
+                 border-radius: 22px; padding: 24px; }
+        .title { color: %(text)s; font-size: 36px; font-weight: 700; }
+        .brand-name { color: #ff8a26; font-size: 17px; font-weight: 600; }
+        .school-name { color: %(text)s; font-size: 15px; font-weight: 600; }
+        .section-title { color: #ff8a26; font-size: 15px; font-weight: 700; }
         .subtitle { color: %(muted)s; font-size: 17px; }
-        .code { color: %(text)s; font-size: 30px; letter-spacing: 9px; }
+        .code { color: %(text)s; background: #101012; border: 1px solid #3c3c42;
+                border-radius: 12px; padding: 12px; font-size: 30px; letter-spacing: 9px; }
         .status { color: %(muted)s; font-size: 15px; }
         .error { color: %(danger)s; font-size: 15px; }
-        button.key { background: #33445f; color: %(text)s; border: 0;
-                     border-radius: 14px; min-width: 72px; min-height: 66px;
+        button.key { background: #242428; background-image: none;
+                     color: %(text)s; border: 1px solid #3b3b42; box-shadow: none;
+                     border-radius: 14px; min-width: 72px; min-height: 54px;
                      font-size: 25px; font-weight: 600; }
-        button.key:hover { background: #425879; }
-        button.confirm { background: %(primary)s; }
-        button.confirm:hover { background: #1d4ed8; }
+        button.key:hover { background: #343438; border-color: #ff8a26; }
+        button.key:active { background: #453022; }
+        button.confirm { background: %(primary)s; border-color: #ef7420; }
+        button.confirm:hover { background: #d55a0c; }
+        button.key:disabled { background: #242426; color: #929299; border-color: #39393e; }
         button.small { font-size: 17px; }
         """ % COLORS
         provider = Gtk.CssProvider()
@@ -127,14 +136,35 @@ class LockScreen:
         )
 
     def build_view(self):
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        root.set_border_width(24)
         root.set_halign(Gtk.Align.CENTER)
         root.set_valign(Gtk.Align.CENTER)
         root.get_style_context().add_class("screen")
 
-        title = Gtk.Label(label="BB Kilit — QR ile giriş")
+        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        header.set_hexpand(True)
+        school = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        school.set_halign(Gtk.Align.CENTER)
+        if os.path.isfile(SCHOOL_LOGO_PATH):
+            logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(SCHOOL_LOGO_PATH, 80, 80, True)
+            school.pack_start(Gtk.Image.new_from_pixbuf(logo), False, False, 0)
+        else:
+            school_name = Gtk.Label(label="Borusan Asım Kocabıyık\nMesleki ve Teknik Anadolu Lisesi")
+            school_name.set_justify(Gtk.Justification.CENTER)
+            school_name.get_style_context().add_class("school-name")
+            school.pack_start(school_name, False, False, 0)
+        header.pack_start(school, False, False, 0)
+        brand = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        brand.set_halign(Gtk.Align.CENTER)
+        title = Gtk.Label(label="BB Kilit")
         title.get_style_context().add_class("title")
-        root.pack_start(title, False, False, 0)
+        brand.pack_start(title, False, False, 0)
+        expanded_name = Gtk.Label(label="Borusan Bilişim Kilit")
+        expanded_name.get_style_context().add_class("brand-name")
+        brand.pack_start(expanded_name, False, False, 0)
+        header.pack_start(brand, False, False, 0)
+        root.pack_start(header, False, False, 0)
 
         subtitle = Gtk.Label(
             label="QR kodu telefonunuzla okutun ve 6 haneli açma kodunu alın."
@@ -149,10 +179,13 @@ class LockScreen:
         qr_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         qr_column.set_halign(Gtk.Align.CENTER)
         qr_column.set_valign(Gtk.Align.CENTER)
+        qr_caption = Gtk.Label(label="01  ·  QR KODU OKUT")
+        qr_caption.get_style_context().add_class("section-title")
+        qr_column.pack_start(qr_caption, False, False, 0)
         self.qr_image = Gtk.Image()
         self.qr_image.set_size_request(320, 320)
         qr_column.pack_start(self.qr_image, False, False, 0)
-        self.board_label = Gtk.Label(label="Tahta bağlantısı hazırlanıyor…")
+        self.board_label = Gtk.Label(label="QR hazırlanıyor…")
         self.board_label.get_style_context().add_class("status")
         qr_column.pack_start(self.board_label, False, False, 0)
         self.qr_countdown = Gtk.Label(label="")
@@ -163,8 +196,8 @@ class LockScreen:
         keypad_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         keypad_column.set_halign(Gtk.Align.CENTER)
         keypad_column.set_valign(Gtk.Align.CENTER)
-        code_caption = Gtk.Label(label="6 haneli kod")
-        code_caption.get_style_context().add_class("subtitle")
+        code_caption = Gtk.Label(label="02  ·  6 HANELİ KODU GİR")
+        code_caption.get_style_context().add_class("section-title")
         keypad_column.pack_start(code_caption, False, False, 0)
         self.code_label = Gtk.Label(label="○○○○○○")
         self.code_label.get_style_context().add_class("code")
@@ -189,7 +222,7 @@ class LockScreen:
         keypad_column.pack_start(grid, False, False, 0)
 
         self.confirm_button = self.make_button(
-            "Tahtayı Aç", self.submit_code, confirm=True
+            "Giriş Yap", self.submit_code, confirm=True
         )
         self.confirm_button.set_sensitive(False)
         keypad_column.pack_start(self.confirm_button, False, False, 0)
@@ -205,7 +238,17 @@ class LockScreen:
         self.keyboard_label.set_max_width_chars(36)
         self.keyboard_label.get_style_context().add_class("status")
         keypad_column.pack_start(self.keyboard_label, False, False, 0)
-        self.window.add(root)
+        # Sağ alt alan sonraki görsel/metin için boş tutulur.
+        footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        footer.set_size_request(-1, 20)
+        self.footer_extension = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.footer_extension.set_halign(Gtk.Align.END)
+        footer.pack_end(self.footer_extension, False, False, 0)
+        root.pack_start(footer, False, False, 0)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scroll.add(root)
+        self.window.add(scroll)
         self.window.show_all()
 
     @staticmethod
