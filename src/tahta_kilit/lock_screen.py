@@ -1,4 +1,4 @@
-"""BB Kilit normal GTK penceresi; klavye ve dokunmatik kod girişi."""
+"""BB Kilit tam ekran oturum arayüzü; kilitliyken dokunmatik kod girişi."""
 
 import json
 import os
@@ -7,6 +7,7 @@ from io import BytesIO
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from tahta_kilit.site_url import resolve_site_url
+from tahta_kilit.keyboard_guard import KeyboardGuard
 
 import qrcode
 import gi
@@ -94,6 +95,14 @@ class LockScreen:
         self.window = Gtk.Window(title="BB Kilit")
         self.window.set_default_size(940, 900)
         self.window.set_position(Gtk.WindowPosition.CENTER)
+        self.window.set_decorated(False)
+        self.window.set_keep_above(True)
+        self.window.set_skip_taskbar_hint(True)
+        self.window.set_skip_pager_hint(True)
+        self.window.fullscreen()
+        self.keyboard_guard = KeyboardGuard(self.window)
+        self.window.connect("map-event", lambda *_: GLib.idle_add(self.ensure_keyboard_guard))
+        self.window.connect("grab-broken-event", self.on_grab_broken)
         self.window.connect("delete-event", self.on_delete)
         self.window.connect("key-press-event", self.on_key_press)
         self.window.connect("destroy", lambda _window: Gtk.main_quit())
@@ -102,7 +111,7 @@ class LockScreen:
         self.refresh_challenge()
         self.refresh_timer = GLib.timeout_add_seconds(5, self.refresh_challenge)
         self.tick_timer = GLib.timeout_add_seconds(1, self.tick)
-        self.keyboard_timer = None
+        self.keyboard_timer = GLib.timeout_add_seconds(1, self.ensure_keyboard_guard)
 
     def apply_css(self):
         css = """
@@ -235,7 +244,7 @@ class LockScreen:
         keypad_column.pack_start(self.status_label, False, False, 0)
         content.pack_start(keypad_column, False, False, 0)
 
-        self.keyboard_label = Gtk.Label(label="Kodu klavyeden veya dokunmatik tuş takımından girebilirsiniz.")
+        self.keyboard_label = Gtk.Label(label="Kodu ekrandaki dokunmatik tuş takımından girin.")
         self.keyboard_label.set_line_wrap(True)
         self.keyboard_label.set_max_width_chars(36)
         self.keyboard_label.get_style_context().add_class("status")
@@ -391,28 +400,36 @@ class LockScreen:
             if source is not None:
                 GLib.source_remove(source)
                 setattr(self, name, None)
+        self.keyboard_guard.release()
         self.window.hide()
 
+    def ensure_keyboard_guard(self):
+        if self.unlocked:
+            return False
+        self.window.fullscreen()
+        state = self.keyboard_guard.acquire()
+        if state != "active_x11":
+            self.keyboard_label.set_text("Kısayol koruması doğrulanamadı. Yönetici X11/kiosk oturum ayarlarını kontrol etmeli.")
+        else:
+            self.keyboard_label.set_text("Kilitliyken yalnız ekrandaki dokunmatik tuş takımını kullanın.")
+        return True
+
+    def on_grab_broken(self, _window, _event):
+        if not self.unlocked:
+            self.keyboard_guard.broken()
+        return True
+
     def on_delete(self, _window, _event):
-        Gtk.main_quit()
-        return False
+        return not self.unlocked
 
     def on_key_press(self, _window, event):
-        key = Gdk.keyval_to_unicode(event.keyval)
-        if key and chr(key) in "0123456789":
-            self.add_digit(chr(key))
-            return True
-        if event.keyval == Gdk.KEY_BackSpace:
-            self.backspace()
-            return True
-        if event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
-            self.submit_code()
-            return True
-        return False
+        # Fiziksel klavyenin tüm tuşları kilitliyken tüketilir; kod ekrandan girilir.
+        return not self.unlocked
 
     def restore_lock_window(self):
         if not self.unlocked:
             self.window.show_all()
+            self.window.fullscreen()
             self.window.present()
         return False
 

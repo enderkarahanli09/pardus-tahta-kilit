@@ -1,3 +1,18 @@
+# BB Kilit 0.1.12 — Tam ekran oturum kilidi
+
+0.1.12, normal pencere kararını değiştirir: oturum açıldığında otomatik başlar, tam ekran ve üstte açılır, pencere kapatma düğmesi yoktur. Fiziksel klavye kilitliyken tüketilir; kod ekrandaki tuş takımından girilir. Doğru koddan sonra klavye/fare yakalama bırakılır, arayüz gizlenir ve süre dolunca geri gelmez. BB Kilit başlatıcısı tekrar kilitleyebilir. UI süreci kapanırsa kullanıcı systemd servisi yeniden başlatır.
+
+## Güncelleme
+
+Paketin üzerine kurun, oturumu kapatıp açın. Kayıtlı anahtar, tahta kimliği ve Google bağlantısı korunur. Paket `/etc/xdg/autostart/bb-kilit-session.desktop` kurar; grafik oturum açılışında başlatıcı çalışır. Henüz yapılandırılmamış tahtada yönetici kurulum penceresi açılır.
+
+## Güvenlik sınırları ve yönetici kurtarma
+
+X11 üzerinde GTK giriş yakalama masaüstü kısayollarını uygulamaya yönlendirir. Wayland compositor politikaları aynı korumayı garanti etmez. Yakalama doğrulanamazsa ekranda yönetici uyarısı gösterilir. Tek ekranlı X11 ETAP hedeflenir; çoklu ekran, sanal terminal geçişi, oturum yöneticisi, süreç öldürme, yönetici hesabı veya fiziksel erişime karşı yalnız uygulama yeterli değildir. Öğrenci oturumu yönetici olmayan kısıtlı kiosk hesabı olmalıdır. X sunucusu VT geçişi ve masaüstü kısayolları okul yöneticisi tarafından ayrıca yapılandırılmalıdır. Root yönetici SSH veya yetkili konsoldan ilgili kullanıcının `tahta-kilit-ui.service` birimini durdurabilir; normal öğrenciler için bir çıkış kısayolu eklenmemiştir.
+
+QR kodunu gören herkes webden açma kodu alabilir. Öğretmen kimlik doğrulaması kullanıcının önceki kararıyla kaldırılmıştır; bu akış öğretmen ile öğrenciyi ayırt etmez. Bu nedenle QR akışı öğrencilere karşı yetkilendirme garantisi vermez.
+
+Aşağıdaki önceki sürüm açıklamaları tarihsel bağlamdır; otomatik başlangıç ve tam ekran için yukarıdaki 0.1.12 davranışı geçerlidir.
 # BB Kilit — Borusan Bilişim Kilit 0.1.11
 
 ## 0.1.11 üzerine güncelleme ve yeni görsel düzen

@@ -1,3 +1,10 @@
+tahta-kilit (0.1.12) unstable; urgency=medium
+
+  * Restore session autostart, fullscreen window and X11 input grab.
+  * Block physical keyboard input until successful touch-code unlock.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 12 Oct 2026 17:30:00 +0300
+
 tahta-kilit (0.1.11) unstable; urgency=medium
 
   * Route legacy Vercel QR URLs directly to Google Apps Script.

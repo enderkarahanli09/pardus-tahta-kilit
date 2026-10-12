@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=BB Kilit Oturum Başlangıcı
+Exec=/usr/lib/tahta-kilit/start-ui.sh
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+Terminal=false

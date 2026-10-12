@@ -1,11 +1,11 @@
 [Unit]
-Description=BB Kilit QR ve altı haneli kod giriş penceresi
+Description=BB Kilit QR ve tam ekran oturum kilidi
 After=graphical-session.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3 -m tahta_kilit.lock_screen
-Restart=on-failure
+Restart=always
 RestartSec=2
 NoNewPrivileges=true
 UnsetEnvironment=TAHTA_KILIT_TEST_MODE
