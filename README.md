@@ -1,3 +1,9 @@
+# BB Kilit 0.1.16 — Üç aktif ortak master kod
+
+Panelde üç farklı 6 haneli kod belirlenir; herhangi biri tüm güncellenmiş tahtaları açar. Üç salt/hash, tek artan sürüm ve tek HMAC imzasıyla atomik güncellenir. Her kod ayrı PBKDF2-HMAC-SHA256 salt kullanır. Paket kurulumundan sonra oturumu yeniden açın. Google panelinde üç kodu güvenli yere kaydederek güncelleyin; kayıtlı tahtayı internete bağlayıp yaklaşık bir dakika bekleyin. Eski tek master kaydı yeni üçlü alınana kadar çalışır. Çevrimdışı tahtalarda son alınmış kodlar geçerlidir.
+
+0.1.15 cihazlar uyumluluk için yalnız ilk kodu alır. Üç kodun tamamı için 0.1.16 gerekir. Kod değiştirmek açık oturumu yeniden kilitlemez. Üç farklı kod girme kontrolü tarayıcıda uygulanır; sunucu açık kodu görmez ve salt/hash kaydını doğrular. Altı rakam için önceki tahmin saldırısı sınırlamaları korunur. Gerçek ETAP üzerinde uçtan uca eşitleme henüz doğrulanmadı.
+
 # BB Kilit 0.1.15 — Ortak master kurtarma parolası
 
 Google yönetim sayfasında 6 haneli ortak master parola belirlenir. Parola panelde Web Crypto PBKDF2-HMAC-SHA256, 600000 yineleme ve 32 bayt rastgele salt ile türetilir; açık parola sunucuya gönderilmez/saklanmaz. Tahta master.json dosyasında yalnız doğrulama kaydı tutar (root:0600). Master parola, ortak yönetici paneli giriş parolasından ayrıdır. QR giriş kodu 6 haneli kalır.

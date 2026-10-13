@@ -39,12 +39,18 @@ def validate_state(state):
         raise ValueError("Invalid master version")
     if state.get("iterations") != ITERATIONS:
         raise ValueError("Invalid work factor")
-    for field in ("salt", "hash"):
-        value = state.get(field)
-        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9+/]{43}=", value):
-            raise ValueError("Invalid master data")
-        if len(base64.b64decode(value, validate=True)) != 32:
-            raise ValueError("Invalid master data")
+    entries = state.get("entries", [state])
+    if not isinstance(entries, list) or len(entries) not in (1, 3):
+        raise ValueError("Invalid master count")
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("Invalid master entry")
+        for field in ("salt", "hash"):
+            value = entry.get(field)
+            if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9+/]{43}=", value):
+                raise ValueError("Invalid master data")
+            if len(base64.b64decode(value, validate=True)) != 32:
+                raise ValueError("Invalid master data")
 
 
 def matches(board_id, candidate):
@@ -53,8 +59,11 @@ def matches(board_id, candidate):
     state = read_state(board_id)
     if state is None:
         return False
-    actual = hashlib.pbkdf2_hmac("sha256", candidate.encode("ascii"), base64.b64decode(state["salt"]), ITERATIONS)
-    return hmac.compare_digest(actual, base64.b64decode(state["hash"]))
+    matched = False
+    for entry in state.get("entries", [state]):
+        actual = hashlib.pbkdf2_hmac("sha256", candidate.encode("ascii"), base64.b64decode(entry["salt"]), ITERATIONS)
+        matched |= hmac.compare_digest(actual, base64.b64decode(entry["hash"]))
+    return matched
 
 
 class GoogleRedirect(urllib.request.HTTPRedirectHandler):
@@ -75,7 +84,7 @@ def synchronize():
     board = config["board_id"]
     nonce = secrets.token_hex(16)
     signature = base64.urlsafe_b64encode(hmac.new(key, ("master-sync:v1|" + board + "|" + nonce).encode("ascii"), hashlib.sha256).digest()).decode().rstrip("=")
-    body = json.dumps({"action":"master-sync", "boardId":board, "nonce":nonce, "signature":signature}).encode()
+    body = json.dumps({"action":"master-sync", "format":2, "boardId":board, "nonce":nonce, "signature":signature}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type":"application/json"})
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), GoogleRedirect())
     with opener.open(req, timeout=20) as response:
@@ -86,14 +95,21 @@ def synchronize():
     if data.get("ok") is not True or data.get("boardId") != board or data.get("nonce") != nonce:
         return
     validate_state(data)
-    message = "master-response:v1|{}|{}|{}|{}|{}|{}".format(board, nonce, data["version"], data["iterations"], data["salt"], data["hash"])
+    if "entries" in data:
+        fields = ["master-response:v2", board, nonce, str(data["version"]), str(data["iterations"])]
+        for entry in data["entries"]:
+            fields.extend((entry["salt"], entry["hash"]))
+        message = "|".join(fields)
+    else:
+        message = "master-response:v1|{}|{}|{}|{}|{}|{}".format(board, nonce, data["version"], data["iterations"], data["salt"], data["hash"])
     expected = base64.urlsafe_b64encode(hmac.new(key, message.encode("ascii"), hashlib.sha256).digest()).decode().rstrip("=")
     if not isinstance(data.get("signature"), str) or not hmac.compare_digest(expected, data["signature"]):
         raise ValueError("Invalid master signature")
     old = read_state(board)
-    if old and data["version"] <= old["version"]:
+    if old and (data["version"] < old["version"] or (data["version"] == old["version"] and len(old.get("entries", [old])) >= len(data.get("entries", [data])))):
         return
-    state = {name:data[name] for name in ("boardId", "version", "iterations", "salt", "hash")}
+    state = {name:data[name] for name in ("boardId", "version", "iterations")}
+    state["entries"] = data.get("entries", [{"salt":data.get("salt"), "hash":data.get("hash")}])
     directory = os.lstat("/etc/tahta-kilit")
     if not stat.S_ISDIR(directory.st_mode) or directory.st_uid != 0 or stat.S_IMODE(directory.st_mode) & 0o022:
         raise PermissionError("Unprotected configuration directory")

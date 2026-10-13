@@ -43,7 +43,7 @@ def load_config():
 def call_verifier(payload):
     request_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-        connection.settimeout(2)
+        connection.settimeout(15 if payload.get("action") == "verify-master" else 2)
         connection.connect(SOCKET_PATH)
         connection.sendall(request_bytes + b"\n")
         response_bytes = b""
