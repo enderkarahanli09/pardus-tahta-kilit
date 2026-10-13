@@ -5,7 +5,7 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 from tahta_kilit.site_url import validate_site_url
 
 
-DEFAULT_QR_PORTAL_URL = "https://script.google.com/macros/s/AKfycbwFv0Gd9TqNc9rN4mJwwsUZzJmDByugiK6bfjY-RWB7qkv5geJs8WD9_KtBHcqF_mwlFA/exec"
+DEFAULT_QR_PORTAL_URL = "https://script.google.com/macros/s/AKfycbzdIzeD67-DOjuSnH47LT2_gFeAkH86m0H4cJwpzQUt9YMGArWvYGA3Kj8khciVUVyKOw/exec"
 
 
 def build_portal_qr_url(challenge, portal_url=DEFAULT_QR_PORTAL_URL):

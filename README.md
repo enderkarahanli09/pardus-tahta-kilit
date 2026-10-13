@@ -1,3 +1,9 @@
+# BB Kilit 0.1.20 — Yeni öğretmen giriş adresi
+
+Tahta QR bağlantısı yeni BORUSANWEB dağıtımını açar: https://script.google.com/macros/s/AKfycbzdIzeD67-DOjuSnH47LT2_gFeAkH86m0H4cJwpzQUt9YMGArWvYGA3Kj8khciVUVyKOw/exec
+
+`tahta-kilit_0.1.20_all.deb` paketini mevcut kurulumun üzerine yükleyip oturumu kapatıp açın. QR ile taşınan tahta kimliği ve istek kodu, öğretmen girişinden sonra U6 kartına aktarılır. Bu otomatik akış için yeni dağıtımda QR destekli Code.gs ve Index.html dosyalarının yayımlanmış olması gerekir.
+
 # BB Kilit 0.1.19 — Öğretmen portalından QR ile açma
 
 Tahta QR'ını telefonun kamerasıyla okutun. BORUSANWEB öğretmen giriş sayfası açılır; öğretmen girişinden sonra U6 yetkisi bulunan hesabın **6. BB Kilit** kartı otomatik açılır. Tahta kimliği ve altı karakterli istek kodu BB Kilit sayfasına otomatik aktarılır. Sayfa altı haneli açma kodunu üretir; bu kodu tahtaya girin. Vercel sayfasında QR taraması yapılmaz.
