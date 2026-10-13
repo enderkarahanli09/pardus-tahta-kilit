@@ -89,6 +89,8 @@ class LockScreen:
         self.config = load_config()
         self.challenge = None
         self.code = ""
+        self.master_mode = False
+        self.code_length = MAX_CODE_DIGITS
         self.unlocked = False
         self.seconds_left = 0
 
@@ -207,7 +209,7 @@ class LockScreen:
         keypad_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         keypad_column.set_halign(Gtk.Align.CENTER)
         keypad_column.set_valign(Gtk.Align.CENTER)
-        code_caption = Gtk.Label(label="02  ·  6 HANELİ KODU GİR")
+        self.code_caption = code_caption = Gtk.Label(label="02  ·  6 HANELİ KODU GİR")
         code_caption.get_style_context().add_class("section-title")
         keypad_column.pack_start(code_caption, False, False, 0)
         self.code_label = Gtk.Label(label="○○○○○○")
@@ -237,6 +239,8 @@ class LockScreen:
         )
         self.confirm_button.set_sensitive(False)
         keypad_column.pack_start(self.confirm_button, False, False, 0)
+        self.master_button = self.make_button("Yönetici master parolası", self.toggle_master, small=True)
+        keypad_column.pack_start(self.master_button, False, False, 0)
         self.status_label = Gtk.Label(label="Telefonunuzdan aldığınız kodu girin.")
         self.status_label.set_line_wrap(True)
         self.status_label.set_max_width_chars(36)
@@ -298,7 +302,7 @@ class LockScreen:
             self.qr_image.set_from_pixbuf(pixbuf_from_qr(qr_url))
             self.board_label.set_text("Tahta: {}".format(response["boardId"]))
             self.seconds_left = response["expiresIn"]
-            self.confirm_button.set_sensitive(len(self.code) == MAX_CODE_DIGITS)
+            self.confirm_button.set_sensitive(len(self.code) == self.code_length)
             self.set_status("Telefonunuzdan aldığınız kodu girin.")
         except Exception:
             self.challenge = None
@@ -313,7 +317,9 @@ class LockScreen:
 
     def show_service_error(self, response):
         error = response.get("error", "internal_error")
-        if error == "cooldown":
+        if error == "master_unavailable":
+            self.set_status("Master parola henüz alınmadı. Tahtayı internete bağlayın veya QR koduyla giriş yapın.", is_error=True)
+        elif error == "cooldown":
             retry = response.get("retryAfter", 30)
             self.set_status(
                 "Çok fazla hatalı deneme. {} saniye sonra tekrar deneyin.".format(retry),
@@ -338,7 +344,7 @@ class LockScreen:
         return True
 
     def add_digit(self, digit):
-        if self.unlocked or len(self.code) >= MAX_CODE_DIGITS:
+        if self.unlocked or len(self.code) >= self.code_length:
             return
         self.code += digit
         self.update_code_display()
@@ -352,20 +358,30 @@ class LockScreen:
         self.update_code_display()
 
     def update_code_display(self):
-        shown = "●" * len(self.code) + "○" * (MAX_CODE_DIGITS - len(self.code))
+        shown = "●" * len(self.code) + "○" * (self.code_length - len(self.code))
         self.code_label.set_text(shown)
         self.confirm_button.set_sensitive(
-            len(self.code) == MAX_CODE_DIGITS and self.challenge is not None
+            len(self.code) == self.code_length and (self.master_mode or self.challenge is not None)
         )
 
+    def toggle_master(self):
+        self.master_mode = not self.master_mode
+        self.code_length = 6 if self.master_mode else MAX_CODE_DIGITS
+        self.code = ""
+        self.code_caption.set_text("02  ·  MASTER PAROLAYI GİR" if self.master_mode else "02  ·  6 HANELİ KODU GİR")
+        self.master_button.set_label("QR koduna dön" if self.master_mode else "Yönetici master parolası")
+        self.update_code_display()
+        self.set_status("6 haneli yönetici master parolasını girin." if self.master_mode else "Telefonunuzdan aldığınız kodu girin.")
+
     def submit_code(self):
-        if self.unlocked or self.challenge is None or len(self.code) != MAX_CODE_DIGITS:
+        if self.unlocked or (not self.master_mode and self.challenge is None) or len(self.code) != self.code_length:
             return
         try:
             response = call_verifier(
                 {
-                    "action": "verify",
-                    "nonce": self.challenge["nonce"],
+                    "action": "verify-master" if self.master_mode else "verify",
+                    "password": self.code if self.master_mode else None,
+                    "nonce": self.challenge["nonce"] if self.challenge else None,
                     "unlockCode": self.code,
                 }
             )

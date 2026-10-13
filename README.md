@@ -1,3 +1,19 @@
+# BB Kilit 0.1.15 — Ortak master kurtarma parolası
+
+Google yönetim sayfasında 6 haneli ortak master parola belirlenir. Parola panelde Web Crypto PBKDF2-HMAC-SHA256, 600000 yineleme ve 32 bayt rastgele salt ile türetilir; açık parola sunucuya gönderilmez/saklanmaz. Tahta master.json dosyasında yalnız doğrulama kaydı tutar (root:0600). Master parola, ortak yönetici paneli giriş parolasından ayrıdır. QR giriş kodu 6 haneli kalır.
+
+## Kullanım
+
+Yönetim panelinde Ortak master parola bölümünden 6 rakam belirleyip güvenli yerde saklayın ve güncelleyin. Tahtada paketi mevcut sürümün üzerine kurun. İnternete ve Google hizmetine erişen kayıtlı tahtalar yaklaşık bir dakika içinde kaydı alır. BB Kilit → Yönetici master parolası → 6 rakam → Giriş Yap. İlk eşitleme olmadan master girişi kullanılamaz; QR girişi sürer. İnternetsiz tahtalar son aldıkları parolayı kabul eder. Eski parolayı iptal etme çevrimdışı tahtaya anında ulaşmaz. Doğru master kodundan sonra mevcut kilit penceresi gizlenir; kiosk ayarları aynı kalır.
+
+## Güncelleme güvenliği
+
+Tahta master-sync:v1|tahtaId|128bitNonce isteğini mevcut tahta anahtarıyla HMAC-SHA256 imzalar. Sunucu yalnız kayıtlı tahta için master-response:v1|tahtaId|nonce|version|iterations|salt|hash imzalı yanıt verir. Tahta imzayı, kendi kimliğini, nonce değerini, veri boyutunu ve artan sürümü doğrular. Salt/hash Base64, 32 bayt; HTTPS sertifika doğrulaması açıktır. Yönlendirmeler yalnız script.google.com ve script.googleusercontent.com alanlarına kabul edilir. Hata halinde eski kayıt korunur. Kimlik değiştirilirse yeni kimlik adına yeniden eşitleme gerekir. İmzalı sürüm geri alma kabul edilmez.
+
+Ayrı root tahta-kilit-master-sync.service ve timer internete erişebilir; yerel doğrulayıcı AF_UNIX sınırlamasını korur. Güncelleme servisi yalnız /etc/tahta-kilit dizinine yazabilir. Hizmet kaldırılırsa timer durdurulur. Beş yanlış master denemesinde 60 saniye bekleme vardır. Deneme sayacı doğrulayıcı belleğindedir, root servis yeniden başlatmasında sıfırlanır. Ortak parola sızarsa tüm tahtalar etkilenir. Root tarafından ele geçirilen tahta, doğrulama kaydını çevrimdışı tahmin saldırısına açabilir; 6 rakam ve pahalı türetme kullanılır. QR kimlik doğrulaması olmaması yönündeki önceki sınır değişmez.
+
+Paket oluşturma ve Python kaynak derleme kontrolü yapılabilir; gerçek ETAP donanımı ve Google/Python eşitleme akışı için pilot doğrulama gerekir.
+
 # BB Kilit 0.1.14 — Yönetici onayıyla tahta kimliği değiştirme
 
 BB Kilit Kurulum artık mevcut tahta kimliğini, sistem yönetici onayıyla değiştirebilir. Anahtar korunur, yapılandırma atomik kaydedilir ve doğrulama servisi yeniden başlatılarak eski QR geçersiz hale gelir.
@@ -94,3 +110,6 @@ Linux ortamında `sh scripts/build-deb.sh` paketi `dist/` altında oluşturur. K
 0.1.11: Logonun dışındaki kare arka plan kaldırıldı; şeffaf PNG ve yuvarlak rozet kullanılır. İç beyaz alan yazıların okunması için korunur.
 
 0.1.11: Eski Vercel adresi kayıtlı olsa bile QR doğrudan Google Apps Script kod sitesini açar. Yeni kurulumlarda Google adresi varsayılandır. Tahta kimliği ve anahtarı korunur. Güncellemeden sonra açık BB Kilit penceresini kapatıp yeniden açın.
+
+Kullanıcının kararıyla ortak master parola 6 rakamdır: yalnız 1 milyon olası değer olduğundan ele geçirilen doğrulama kaydı çevrimdışı tahmin edilebilir. Bu seçenek yüksek güvenlikli kurtarma parolası sağlamaz. Beş yanlış girişte 60 saniye bekleme çevrimiçi/yerel denemeleri yavaşlatır, çevrimdışı hash saldırısını engellemez.
+

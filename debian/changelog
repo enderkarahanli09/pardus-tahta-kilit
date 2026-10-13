@@ -1,3 +1,10 @@
+tahta-kilit (0.1.15) unstable; urgency=medium
+
+  * Add shared 6-digit offline master recovery password verification.
+  * Add minute timer for signed Google synchronization with replay protection.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Tue, 13 Oct 2026 12:00:00 +0300
+
 tahta-kilit (0.1.14) unstable; urgency=medium
 
   * Allow administrator-authorized board ID changes while preserving board key.

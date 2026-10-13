@@ -7,6 +7,7 @@ if [ "$1" = "configure" ]; then
     fi
     install -d -o root -g tahta-kilit -m 0750 /etc/tahta-kilit
     systemctl daemon-reload
+    systemctl enable --now tahta-kilit-master-sync.timer
     if [ -f /etc/tahta-kilit/config.json ] && [ -f /etc/tahta-kilit/board.key ]; then
         # Güncellemede mevcut anahtarları koru, yalnız çalışan doğrulayıcıyı yenile.
         systemctl try-restart tahta-kilit-verifier.service

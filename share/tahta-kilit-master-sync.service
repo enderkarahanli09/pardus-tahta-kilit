@@ -1,0 +1,18 @@
+[Unit]
+Description=BB Kilit authenticated master password synchronization
+After=network-online.target
+[Service]
+Type=oneshot
+User=root
+Group=tahta-kilit
+ExecStart=/usr/bin/python3 -I -m tahta_kilit.master_password
+TimeoutStartSec=35
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/etc/tahta-kilit
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+UMask=0077

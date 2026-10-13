@@ -30,6 +30,7 @@ mkdir -p \
 
 install -m 0644 "$PROJECT_DIR"/src/tahta_kilit/*.py \
     "$PACKAGE_ROOT/usr/lib/python3/dist-packages/tahta_kilit/"
+install -m 0644 "$PROJECT_DIR/share/tahta-kilit-master-sync.service" "$PROJECT_DIR/share/tahta-kilit-master-sync.timer" "$PACKAGE_ROOT/lib/systemd/system/"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-verifier.service" \
     "$PACKAGE_ROOT/lib/systemd/system/tahta-kilit-verifier.service"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-ui.service" \
@@ -53,7 +54,7 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: all
-Depends: adduser, passwd, systemd, pkexec, policykit-1-gnome | polkit-kde-agent-1, python3, python3-gi, gir1.2-gtk-3.0, python3-qrcode, python3-pil, xdg-user-dirs
+Depends: ca-certificates, adduser, passwd, systemd, pkexec, policykit-1-gnome | polkit-kde-agent-1, python3, python3-gi, gir1.2-gtk-3.0, python3-qrcode, python3-pil, xdg-user-dirs
 Maintainer: enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>
 Description: BB Kilit offline QR code application
   Python GTK 3 fullscreen session lock and local verifier for six-digit QR unlock codes.

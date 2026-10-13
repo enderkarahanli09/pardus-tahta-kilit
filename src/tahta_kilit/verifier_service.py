@@ -167,6 +167,26 @@ class Verifier:
             raise ServiceError("invalid_code")
 
 
+    def verify_master(self, candidate):
+        from tahta_kilit.master_password import matches, read_state
+        with self.lock:
+            now = time.monotonic()
+            self._ensure_available(now)
+            if read_state(self.board_id) is None:
+                raise ServiceError("master_unavailable")
+            if matches(self.board_id, candidate):
+                self.challenge = None
+                self.bad_codes_for_challenge = 0
+                self.recent_failures.clear()
+                return {"ok": True, "unlockMode": "master"}
+            self.recent_failures.append(now)
+            self._prune_failures(now)
+            if len(self.recent_failures) >= 5:
+                self.cooldown_until = now + 60
+                raise ServiceError("cooldown", 60)
+            raise ServiceError("invalid_code")
+
+
 class RequestHandler(socketserver.StreamRequestHandler):
     def setup(self):
         self.request.settimeout(3)
@@ -201,6 +221,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
         action = request.get("action")
         if action == "challenge":
             return self.server.verifier.get_challenge()
+        if action == "verify-master":
+            return self.server.verifier.verify_master(request.get("password"))
         if action == "verify":
             return self.server.verifier.verify(
                 request.get("nonce"), request.get("unlockCode")
