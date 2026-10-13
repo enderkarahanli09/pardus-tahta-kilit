@@ -1,3 +1,11 @@
+# BB Kilit 0.1.19 — Öğretmen portalından QR ile açma
+
+Tahta QR'ını telefonun kamerasıyla okutun. BORUSANWEB öğretmen giriş sayfası açılır; öğretmen girişinden sonra U6 yetkisi bulunan hesabın **6. BB Kilit** kartı otomatik açılır. Tahta kimliği ve altı karakterli istek kodu BB Kilit sayfasına otomatik aktarılır. Sayfa altı haneli açma kodunu üretir; bu kodu tahtaya girin. Vercel sayfasında QR taraması yapılmaz.
+
+Bu akış için Google Apps Script projesindeki yeni `Code.gs` ve `Index.html` dosyaları aynı web uygulaması dağıtımına yayımlanmalıdır. UYGULAMALAR tablosundaki altıncı kartın kodu `U6`, Vercel adresi de BB Kilit sayfasının adresi olmalıdır. Kart izni olmayan kullanıcıya otomatik açılış yapılmaz. QR isteği 120 saniyede sona erer; süre dolarsa yeni QR okutun.
+
+**Güncelleme:** `tahta-kilit_0.1.19_all.deb` dosyasını mevcut kurulumun üzerine kurun ve oturumu kapatıp açın. Tahta kimliği, anahtar, tahta servis adresi ve master kayıtları korunur; yeniden tahta kaydı gerekmez. Tahta servis adresi/master eşitlemesi bu sürümde değişmemiştir. Gerçek ETAP üzerinde pilot kontrol gerekir.
+
 # BB Kilit 0.1.18 — QR olmadan alternatif giriş
 
 QR yanında **K7M4P2** gibi altı karakterlik bir istek kodu görünür. Bu yalnız örnektir; gerçek kod her istekte tahtada çevrimdışı üretilir. Telefonunuzda Google kod sitesini açın; **QR olmadan kod al** alanına tahta kimliğini ve ekrandaki istek kodunu yazın. Altıncı karakterde site altı rakamlık açma kodunu otomatik getirir. Bu rakamları tahtanın dokunmatik tuş takımından girin. İstek kodunu doğrudan tahtanın sayısal tuş takımına yazmayın. Öğretmen parolası veya Drive listesi gerekmez.

@@ -4,9 +4,7 @@ import json
 import os
 import socket
 from io import BytesIO
-from urllib.parse import urlencode, urlsplit, urlunsplit
-
-from tahta_kilit.site_url import resolve_site_url
+from tahta_kilit.qr_portal import DEFAULT_QR_PORTAL_URL, build_portal_qr_url
 from tahta_kilit.keyboard_guard import KeyboardGuard
 
 import qrcode
@@ -60,17 +58,9 @@ def call_verifier(payload):
     return response
 
 
-def build_qr_url(site_url, challenge):
-    parts = urlsplit(resolve_site_url(site_url))
-    query = urlencode(
-        {
-            "v": "2",
-            "board": challenge["boardId"],
-            "nonce": challenge["nonce"],
-            "sig": challenge["qrSignature"],
-        }
-    )
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, ""))
+def build_qr_url(site_url, challenge, portal_url=DEFAULT_QR_PORTAL_URL):
+    # site_url tahta servisi/master senkronizasyonu için korunur.
+    return build_portal_qr_url(challenge, portal_url)
 
 
 def pixbuf_from_qr(text):
@@ -305,7 +295,8 @@ class LockScreen:
                 self.manual_label.set_text("— — — — — —")
                 return True
             self.challenge = response
-            qr_url = build_qr_url(self.config["site_url"], response)
+            qr_url = build_qr_url(self.config["site_url"], response,
+                                  self.config.get("qr_portal_url", DEFAULT_QR_PORTAL_URL))
             self.qr_image.set_from_pixbuf(pixbuf_from_qr(qr_url))
             self.board_label.set_text("Tahta: {}".format(response["boardId"]))
             self.manual_label.set_text(response.get("manualRequestCode", "— — — — — —"))
