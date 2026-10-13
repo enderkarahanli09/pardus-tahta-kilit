@@ -119,3 +119,6 @@ Linux ortamında `sh scripts/build-deb.sh` paketi `dist/` altında oluşturur. K
 
 Kullanıcının kararıyla ortak master parola 6 rakamdır: yalnız 1 milyon olası değer olduğundan ele geçirilen doğrulama kaydı çevrimdışı tahmin edilebilir. Bu seçenek yüksek güvenlikli kurtarma parolası sağlamaz. Beş yanlış girişte 60 saniye bekleme çevrimiçi/yerel denemeleri yavaşlatır, çevrimdışı hash saldırısını engellemez.
 
+
+0.1.17: Master listesi 0-3 aktif kayıt destekler. Tek kod kaldırma sonrası iki kayıt veya son kod kaldırma sonrası boş liste imzalı eşitlemeyle alınır. Son kayıt kaldırıldıysa master girişi kullanılamaz, QR girişi devam eder. İnternetsiz cihazlar eski kodlarını güncelleme alana kadar kabul eder.
+

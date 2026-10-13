@@ -1,3 +1,9 @@
+tahta-kilit (0.1.17) unstable; urgency=medium
+
+  * Allow zero to three active master verifiers for individual removal.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Tue, 13 Oct 2026 13:00:00 +0300
+
 tahta-kilit (0.1.16) unstable; urgency=medium
 
   * Support three simultaneously valid shared six-digit master passwords.

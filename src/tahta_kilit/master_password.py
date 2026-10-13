@@ -40,7 +40,7 @@ def validate_state(state):
     if state.get("iterations") != ITERATIONS:
         raise ValueError("Invalid work factor")
     entries = state.get("entries", [state])
-    if not isinstance(entries, list) or len(entries) not in (1, 3):
+    if not isinstance(entries, list) or not 0 <= len(entries) <= 3:
         raise ValueError("Invalid master count")
     for entry in entries:
         if not isinstance(entry, dict):

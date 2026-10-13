@@ -172,7 +172,8 @@ class Verifier:
         with self.lock:
             now = time.monotonic()
             self._ensure_available(now)
-            if read_state(self.board_id) is None:
+            state = read_state(self.board_id)
+            if state is None or ("entries" in state and not state["entries"]):
                 raise ServiceError("master_unavailable")
             if matches(self.board_id, candidate):
                 self.challenge = None
