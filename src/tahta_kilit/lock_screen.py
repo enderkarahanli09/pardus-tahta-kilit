@@ -180,7 +180,7 @@ class LockScreen:
         root.pack_start(header, False, False, 0)
 
         subtitle = Gtk.Label(
-            label="QR kodu telefonunuzla okutun ve 6 haneli açma kodunu alın."
+            label="QR okutun veya aşağıdaki istek kodunu siteye girin."
         )
         subtitle.get_style_context().add_class("subtitle")
         root.pack_start(subtitle, False, False, 0)
@@ -201,6 +201,12 @@ class LockScreen:
         self.board_label = Gtk.Label(label="QR hazırlanıyor…")
         self.board_label.get_style_context().add_class("status")
         qr_column.pack_start(self.board_label, False, False, 0)
+        manual_caption = Gtk.Label(label="QR OKUTAMIYORSANIZ · SİTEYE BU KODU YAZIN")
+        manual_caption.get_style_context().add_class("status")
+        qr_column.pack_start(manual_caption, False, False, 0)
+        self.manual_label = Gtk.Label(label="— — — — — —")
+        self.manual_label.get_style_context().add_class("code")
+        qr_column.pack_start(self.manual_label, False, False, 0)
         self.qr_countdown = Gtk.Label(label="")
         self.qr_countdown.get_style_context().add_class("status")
         qr_column.pack_start(self.qr_countdown, False, False, 0)
@@ -296,11 +302,13 @@ class LockScreen:
                 self.confirm_button.set_sensitive(False)
                 self.challenge = None
                 self.qr_image.clear()
+                self.manual_label.set_text("— — — — — —")
                 return True
             self.challenge = response
             qr_url = build_qr_url(self.config["site_url"], response)
             self.qr_image.set_from_pixbuf(pixbuf_from_qr(qr_url))
             self.board_label.set_text("Tahta: {}".format(response["boardId"]))
+            self.manual_label.set_text(response.get("manualRequestCode", "— — — — — —"))
             self.seconds_left = response["expiresIn"]
             self.confirm_button.set_sensitive(len(self.code) == self.code_length)
             self.set_status("Telefonunuzdan aldığınız kodu girin.")
@@ -308,6 +316,7 @@ class LockScreen:
             self.challenge = None
             self.confirm_button.set_sensitive(False)
             self.qr_image.clear()
+            self.manual_label.set_text("— — — — — —")
             self.board_label.set_text("Yerel doğrulama servisine ulaşılamıyor.")
             self.set_status(
                 "Servis başlatılmalı ve oturum kullanıcısı tahta-kilit grubunda olmalı.",
@@ -326,7 +335,7 @@ class LockScreen:
                 is_error=True,
             )
         elif error == "stale_challenge":
-            self.set_status("QR kodun süresi doldu. Yeni QR kodu okutun.", is_error=True)
+            self.set_status("İstek süresi doldu. Güncel QR veya istek kodunu kullanın.", is_error=True)
         else:
             self.set_status("İstek tamamlanamadı. QR kodu yenileyip tekrar deneyin.", is_error=True)
 
@@ -337,7 +346,7 @@ class LockScreen:
         if self.challenge is not None:
             self.seconds_left = max(0, self.seconds_left - 1)
             self.qr_countdown.set_text(
-                "QR yenilenmesine {} sn".format(self.seconds_left)
+                "QR / istek kodu yenilenmesine {} sn".format(self.seconds_left)
             )
             if self.seconds_left == 0:
                 self.refresh_challenge()
@@ -399,6 +408,7 @@ class LockScreen:
             elif response.get("error") == "cooldown":
                 self.challenge = None
                 self.qr_image.clear()
+                self.manual_label.set_text("— — — — — —")
                 self.confirm_button.set_sensitive(False)
             return
 
@@ -411,6 +421,7 @@ class LockScreen:
         self.challenge = None
         self.update_code_display()
         self.qr_image.clear()
+        self.manual_label.set_text("— — — — — —")
         for name in ("refresh_timer", "tick_timer", "keyboard_timer"):
             source = getattr(self, name, None)
             if source is not None:

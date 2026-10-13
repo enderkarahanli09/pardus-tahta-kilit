@@ -1,3 +1,13 @@
+# BB Kilit 0.1.18 — QR olmadan alternatif giriş
+
+QR yanında **K7M4P2** gibi altı karakterlik bir istek kodu görünür. Bu yalnız örnektir; gerçek kod her istekte tahtada çevrimdışı üretilir. Telefonunuzda Google kod sitesini açın; **QR olmadan kod al** alanına tahta kimliğini ve ekrandaki istek kodunu yazın. Altıncı karakterde site altı rakamlık açma kodunu otomatik getirir. Bu rakamları tahtanın dokunmatik tuş takımından girin. İstek kodunu doğrudan tahtanın sayısal tuş takımına yazmayın. Öğretmen parolası veya Drive listesi gerekmez.
+
+İstek kodu `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` alfabesinden rastgele seçilir; `0`, `1`, `I`, `O` kullanılmaz. Küçük harfler webde büyük harfe çevrilir. Altı karakter yaklaşık 30 bit rastgelelik sağlar; kolay yazılabilmesi için QR'daki önceki 128 bit rastgele nonce yerine kısa koddan tahtaya özel HMAC nonce türetilir. Bu bir öğretmen yetkilendirmesi değildir: QR veya güncel istek kodunu gören herkes açma kodu isteyebilir.
+
+QR ve elle giriş **aynı altı rakamlık sonucu** verir. Her ikisi aynı 120 saniyelik isteğe bağlıdır; başarılı giriş ikisini birlikte tüketir. Yerel hatalı deneme sınırları ve Google'da tahta başına dakikada 10 istek bütçesi korunur. Google çevrimdışı tahtanın güncel isteğini bilemez; eski veya yanlış istek koduna bir sonuç üretse bile tahta yalnız mevcut isteğin sonucunu kabul eder. Altı rakamlık sonuçlar nedeniyle tesadüfi çakışma mümkündür; mutlak çakışmasızlık iddiası yoktur.
+
+**Güncelleme:** `tahta-kilit_0.1.18_all.deb` dosyasını mevcut kurulumun üzerine kurun ve oturumu kapatıp açın. Tahta kimliği, anahtar, site adresi ve master kayıtları korunur; yeniden tahta kaydı gerekmez. Google tarafında yeni `Code.gs` ve `Index.html` dosyaları aynı deployment'a yeni sürüm olarak yayımlanmalıdır. Başka Google projesine kopyalanmış siteler kendiliğinden güncellenmez. Önceki Pardus sürümlerinin QR girişi yeni Google sürümüyle uyumludur; elle giriş için 0.1.18 gerekir. Tam ekran, oturumda otomatik açılma ve dokunmatik davranışı devam eder. Gerçek ETAP üzerinde pilot kontrol gerekir.
+
 # BB Kilit 0.1.16 — Üç aktif ortak master kod
 
 Panelde üç farklı 6 haneli kod belirlenir; herhangi biri tüm güncellenmiş tahtaları açar. Üç salt/hash, tek artan sürüm ve tek HMAC imzasıyla atomik güncellenir. Her kod ayrı PBKDF2-HMAC-SHA256 salt kullanır. Paket kurulumundan sonra oturumu yeniden açın. Google panelinde üç kodu güvenli yere kaydederek güncelleyin; kayıtlı tahtayı internete bağlayıp yaklaşık bir dakika bekleyin. Eski tek master kaydı yeni üçlü alınana kadar çalışır. Çevrimdışı tahtalarda son alınmış kodlar geçerlidir.

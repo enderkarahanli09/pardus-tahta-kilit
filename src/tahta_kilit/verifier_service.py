@@ -12,7 +12,7 @@ import time
 from collections import deque
 from urllib.parse import urlsplit
 
-from tahta_kilit.protocol import BOARD_ID_PATTERN, code_matches, qr_signature
+from tahta_kilit.protocol import BOARD_ID_PATTERN, MANUAL_ALPHABET, code_matches, manual_nonce, qr_signature
 from tahta_kilit.site_url import validate_site_url
 
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
@@ -112,9 +112,11 @@ class Verifier:
             now = time.monotonic()
             self._ensure_available(now)
             if self.challenge is None or now >= self.challenge["expires_at"]:
-                nonce = secrets.token_hex(16)
+                manual_code = "".join(secrets.choice(MANUAL_ALPHABET) for _ in range(6))
+                nonce = manual_nonce(self.key, self.board_id, manual_code)
                 self.challenge = {
                     "nonce": nonce,
+                    "manual_code": manual_code,
                     "expires_at": now + CHALLENGE_TTL_SECONDS,
                 }
                 self.bad_codes_for_challenge = 0
@@ -127,6 +129,7 @@ class Verifier:
                 "version": 2,
                 "boardId": self.board_id,
                 "nonce": self.challenge["nonce"],
+                "manualRequestCode": self.challenge["manual_code"],
                 "qrSignature": qr_signature(
                     self.key, self.board_id, self.challenge["nonce"]
                 ),

@@ -1,3 +1,11 @@
+tahta-kilit (0.1.18) unstable; urgency=medium
+
+  * Add six-character offline manual challenge beside QR for camera-free unlock.
+  * Use board-bound HMAC nonce derivation and share existing expiry/rate limits.
+  * Preserve existing board keys, configuration and master recovery codes.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Tue, 13 Oct 2026 12:45:00 +0300
+
 tahta-kilit (0.1.17) unstable; urgency=medium
 
   * Allow zero to three active master verifiers for individual removal.

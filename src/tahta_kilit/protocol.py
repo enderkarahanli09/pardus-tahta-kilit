@@ -9,6 +9,18 @@ NONCE_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 BOARD_ID_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9-]{0,63}$")
 UNLOCK_CODE_LENGTH = 6
 UNLOCK_CODE_SPACE = 1_000_000
+MANUAL_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+MANUAL_PATTERN = re.compile(r"^[A-HJ-NP-Z2-9]{6}$")
+
+
+def manual_nonce(key, board_id, request_code):
+    """Kısa istek kodunu tahtaya özel, QR v2 ile uyumlu nonce'a dönüştürür."""
+    _validate_key(key)
+    _validate_board_id(board_id)
+    if not isinstance(request_code, str) or not MANUAL_PATTERN.fullmatch(request_code):
+        raise ValueError("İstek kodu altı harf/rakam olmalıdır.")
+    message = "manual-nonce:v1|{}|{}".format(board_id, request_code).encode("ascii")
+    return hmac.new(key, message, hashlib.sha256).digest()[:16].hex()
 
 
 def _validate_key(key):
