@@ -12,6 +12,9 @@ class PortalQrTests(unittest.TestCase):
     def test_qr_goes_to_teacher_portal_and_carries_both_input_fields(self):
         url = build_portal_qr_url(self.challenge)
         self.assertEqual(url.split("?")[0], DEFAULT_QR_PORTAL_URL)
+        self.assertEqual(urlsplit(url).scheme, "https")
+        self.assertEqual(urlsplit(url).hostname, "borusandijital.s.gy")
+        self.assertEqual(urlsplit(url).path, "/")
         params = parse_qs(urlsplit(url).query)
         self.assertEqual(params["board"], ["BILISIM-01"])
         self.assertEqual(params["request"], ["K7M4P2"])

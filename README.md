@@ -1,3 +1,11 @@
+# BB Kilit 0.1.21 — Kalıcı öğretmen giriş adresi
+
+Tahta QR bağlantısının varsayılan hedefi artık https://borusandijital.s.gy/ adresidir. Google Apps dağıtım adresi ileride değişirse kısa bağlantının yönlendirme hedefini güncelleyin; QR için yeni Pardus paketi gerekmez. Yönlendirme v, board, request, nonce ve sig parametrelerini yeni adrese taşımalıdır. 14 Ekim 2026 tarihinde deneme parametrelerinin 302 yönlendirmesinde korunduğu doğrulandı.
+
+`tahta-kilit_0.1.21_all.deb` paketini mevcut kurulumun üzerine yükleyin ve uygulamayı yeniden başlatın. Ayrı bir `qr_portal_url` yapılandırması kullanılıyorsa onu da https://borusandijital.s.gy/ olarak güncelleyin veya varsayılanı kullanmak için bu özel ayarı kaldırın. Öğretmen portalı, adı BB KILIT olan Vercel kartını seçen güncel Index sürümünü kullanmalıdır.
+
+Bu adres QR ile öğretmen girişini açmak içindir. Tahtanın kod servisi ve master eşitlemesi için kullanılan `site_url` ayarı ayrı kalır; bu ayarı öğretmen giriş adresiyle değiştirmeyin.
+
 # BB Kilit 0.1.20 — Yeni öğretmen giriş adresi
 
 Tahta QR bağlantısı yeni BORUSANWEB dağıtımını açar: https://script.google.com/macros/s/AKfycbzdIzeD67-DOjuSnH47LT2_gFeAkH86m0H4cJwpzQUt9YMGArWvYGA3Kj8khciVUVyKOw/exec

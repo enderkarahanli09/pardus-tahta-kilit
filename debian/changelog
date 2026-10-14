@@ -1,3 +1,10 @@
+tahta-kilit (0.1.21) unstable; urgency=medium
+
+  * Use the stable borusandijital.s.gy portal URL in board QR links.
+  * Preserve board, request, nonce and signature query parameters.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Wed, 14 Oct 2026 00:00:00 +0300
+
 tahta-kilit (0.1.20) unstable; urgency=medium
 
   * Use the new BORUSANWEB Google Apps Script deployment for board QR links.
