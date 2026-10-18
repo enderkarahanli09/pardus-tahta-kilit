@@ -37,9 +37,13 @@ with tempfile.TemporaryDirectory(prefix="tahta-setup-test-") as temporary, conte
     assert os.stat(key_path).st_uid == 0
     assert payload["boardId"] == "ETAP-DEMO"
     assert not payload["existing"]
+    # 0.1.14'ten beri kimlik ve adres değiştirilebilir; mevcut anahtar aynen korunur.
     result = setup_backend.configure(["OTHER-ID", "https://other.example/ac"])
     assert result["existing"]
-    assert result["boardId"] == "ETAP-DEMO"
+    assert result["boardId"] == "OTHER-ID"
     assert Path(key_path).read_bytes() == original
-    assert result["boardKeysEntry"] == payload["boardKeysEntry"]
+    assert result["boardKeysEntry"] == {"OTHER-ID": payload["boardKeysEntry"]["ETAP-DEMO"]}
+    saved = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    assert saved["board_id"] == "OTHER-ID" and saved["site_url"] == "https://other.example/ac"
+    assert stat.S_IMODE(os.stat(config_path).st_mode) == 0o640
 print("Root setup integration passed; real board files and services unchanged")

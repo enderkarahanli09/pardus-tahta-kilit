@@ -12,10 +12,14 @@ class SessionUnlockTests(unittest.TestCase):
     def screen(self):
         screen = lock_screen.LockScreen.__new__(lock_screen.LockScreen)
         screen.unlocked = False
+        screen.master_mode = False
+        screen.code_length = lock_screen.MAX_CODE_DIGITS
         screen.code = "123456"
         screen.challenge = {"nonce": "a" * 32}
         screen.window = Mock()
         screen.qr_image = Mock()
+        screen.manual_label = Mock()
+        screen.keyboard_guard = Mock()
         screen.code_label = Mock()
         screen.confirm_button = Mock()
         screen.refresh_timer = 11
@@ -80,12 +84,43 @@ class SessionUnlockTests(unittest.TestCase):
         self.assertFalse(screen.tick())
         screen.window.show_all.assert_not_called()
 
-    def test_iconified_event_does_not_restore_unlocked_window(self):
+    def test_grab_broken_only_relocks_while_locked(self):
+        # Kilitliyken klavye yakalaması kırılırsa koruma yeniden denenir; açıldıktan sonra dokunulmaz.
         screen = self.screen()
+        self.assertTrue(screen.on_grab_broken(None, None))
+        screen.keyboard_guard.broken.assert_called_once_with()
         screen.unlocked = True
-        with patch.object(lock_screen.GLib, "idle_add") as idle:
-            screen.on_window_state(None, SimpleNamespace(new_window_state=lock_screen.Gdk.WindowState.ICONIFIED))
-        idle.assert_not_called()
+        screen.keyboard_guard.reset_mock()
+        screen.on_grab_broken(None, None)
+        screen.keyboard_guard.broken.assert_not_called()
+
+    def test_map_event_guard_runs_once(self):
+        # idle_add False dönen geri çağrıyı bir kez çalıştırır; True dönseydi sonsuz döngü olurdu.
+        screen = self.screen()
+        screen.keyboard_guard.acquire.return_value = "active_x11"
+        self.assertTrue(screen.ensure_keyboard_guard())
+        self.assertIs(screen.guard_once(), False)
+        screen.unlocked = True
+        self.assertIs(screen.guard_once(), False)
+
+    def test_test_mode_keeps_normal_window(self):
+        # WSLg tam ekran pencereye tıklama iletmez; test modu normal pencere kullanır.
+        screen = self.screen()
+        with patch.object(lock_screen, "TEST_MODE", True):
+            screen.make_fullscreen()
+        screen.window.fullscreen.assert_not_called()
+        with patch.object(lock_screen, "TEST_MODE", False):
+            screen.make_fullscreen()
+        screen.window.fullscreen.assert_called_once_with()
+
+    def test_unlock_releases_keyboard_and_clears_request_code(self):
+        screen = self.screen()
+        with patch.object(lock_screen.GLib, "source_remove"):
+            screen.unlock_session()
+        screen.keyboard_guard.release.assert_called_once_with()
+        screen.manual_label.set_text.assert_called_with("— — — — — —")
+        self.assertFalse(screen.on_delete(None, None))
+        self.assertFalse(screen.on_key_press(None, None))
 
     def test_session_mode_response(self):
         verifier = Verifier("ETAP-DEMO", b"k" * 32)

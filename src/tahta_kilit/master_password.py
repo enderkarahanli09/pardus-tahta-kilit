@@ -11,6 +11,8 @@ import tempfile
 import urllib.request
 from urllib.parse import urlsplit
 
+from tahta_kilit.google_http import GoogleRedirect
+
 PATH = "/etc/tahta-kilit/master.json"
 ITERATIONS = 600000
 
@@ -64,14 +66,6 @@ def matches(board_id, candidate):
         actual = hashlib.pbkdf2_hmac("sha256", candidate.encode("ascii"), base64.b64decode(entry["salt"]), ITERATIONS)
         matched |= hmac.compare_digest(actual, base64.b64decode(entry["hash"]))
     return matched
-
-
-class GoogleRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        parsed = urlsplit(newurl)
-        if parsed.scheme != "https" or parsed.hostname not in ("script.google.com", "script.googleusercontent.com") or parsed.username or parsed.password or parsed.port not in (None, 443):
-            raise ValueError("Unexpected redirect")
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def synchronize():
@@ -132,3 +126,10 @@ if __name__ == "__main__":
     except Exception:
         # Never log HTTP request, authentication material or master verifier.
         print("Master parola güncellenemedi; mevcut çevrimdışı kayıt korunuyor.")
+    try:
+        # QR portal adresi ayrı denenir; master hatası bunu engellemez.
+        from tahta_kilit.portal_sync import synchronize_portal
+        synchronize_portal()
+    except Exception:
+        # Adres, anahtar veya istek ayrıntısı loglanmaz.
+        print("QR portal adresi güncellenemedi; mevcut adres kullanılmaya devam ediyor.")

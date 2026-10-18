@@ -5,6 +5,7 @@ import os
 import socket
 from io import BytesIO
 from tahta_kilit.qr_portal import DEFAULT_QR_PORTAL_URL, build_portal_qr_url
+from tahta_kilit.portal_sync import resolve_qr_portal_url
 from tahta_kilit.keyboard_guard import KeyboardGuard
 
 import qrcode
@@ -87,13 +88,14 @@ class LockScreen:
         self.window = Gtk.Window(title="BB Kilit")
         self.window.set_default_size(940, 900)
         self.window.set_position(Gtk.WindowPosition.CENTER)
-        self.window.set_decorated(False)
-        self.window.set_keep_above(True)
+        if not TEST_MODE:
+            self.window.set_decorated(False)
+            self.window.set_keep_above(True)
         self.window.set_skip_taskbar_hint(True)
         self.window.set_skip_pager_hint(True)
-        self.window.fullscreen()
+        self.make_fullscreen()
         self.keyboard_guard = KeyboardGuard(self.window)
-        self.window.connect("map-event", lambda *_: GLib.idle_add(self.ensure_keyboard_guard))
+        self.window.connect("map-event", lambda *_: GLib.idle_add(self.guard_once))
         self.window.connect("grab-broken-event", self.on_grab_broken)
         self.window.connect("delete-event", self.on_delete)
         self.window.connect("key-press-event", self.on_key_press)
@@ -295,8 +297,9 @@ class LockScreen:
                 self.manual_label.set_text("— — — — — —")
                 return True
             self.challenge = response
-            qr_url = build_qr_url(self.config["site_url"], response,
-                                  self.config.get("qr_portal_url", DEFAULT_QR_PORTAL_URL))
+            # portal.json her QR'da yeniden okunur; panelden yapılan değişiklik yeniden başlatmadan uygulanır.
+            portal_url = resolve_qr_portal_url(response.get("boardId"), self.config.get("qr_portal_url"))
+            qr_url = build_qr_url(self.config["site_url"], response, portal_url)
             self.qr_image.set_from_pixbuf(pixbuf_from_qr(qr_url))
             self.board_label.set_text("Tahta: {}".format(response["boardId"]))
             self.manual_label.set_text(response.get("manualRequestCode", "— — — — — —"))
@@ -424,13 +427,26 @@ class LockScreen:
     def ensure_keyboard_guard(self):
         if self.unlocked:
             return False
-        self.window.fullscreen()
+        self.make_fullscreen()
         state = self.keyboard_guard.acquire()
         if state != "active_x11":
             self.keyboard_label.set_text("Kısayol koruması doğrulanamadı. Yönetici X11/kiosk oturum ayarlarını kontrol etmeli.")
         else:
             self.keyboard_label.set_text("Kilitliyken yalnız ekrandaki dokunmatik tuş takımını kullanın.")
         return True
+
+    def make_fullscreen(self):
+        # Test modu (TAHTA_KILIT_TEST_MODE=1, servis bunu kaldırır) normal pencere açar: WSLg tam ekran,
+        # çerçevesiz ve üstte tutulan pencereye fare tıklaması iletmiyor.
+        if not TEST_MODE:
+            self.window.fullscreen()
+
+    def guard_once(self):
+        # Boşta (idle) çalıştırılan tek seferlik deneme. ensure_keyboard_guard kilitliyken True döndürdüğü
+        # için doğrudan idle_add'e verilirse GLib onu durmadan tekrarlar ve ekrana sürekli tam ekran
+        # isteği gönderir; düzenli deneme zaten saniyede bir keyboard_timer ile yapılır.
+        self.ensure_keyboard_guard()
+        return False
 
     def on_grab_broken(self, _window, _event):
         if not self.unlocked:
@@ -447,7 +463,7 @@ class LockScreen:
     def restore_lock_window(self):
         if not self.unlocked:
             self.window.show_all()
-            self.window.fullscreen()
+            self.make_fullscreen()
             self.window.present()
         return False
 

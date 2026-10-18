@@ -1,8 +1,34 @@
-# BB Kilit 0.1.21 — Kalıcı öğretmen giriş adresi
+# BB Kilit 0.1.27 — Yeni kurulum penceresi
 
-Tahta QR bağlantısının varsayılan hedefi artık https://borusandijital.s.gy/ adresidir. Google Apps dağıtım adresi ileride değişirse kısa bağlantının yönlendirme hedefini güncelleyin; QR için yeni Pardus paketi gerekmez. Yönlendirme v, board, request, nonce ve sig parametrelerini yeni adrese taşımalıdır. 14 Ekim 2026 tarihinde deneme parametrelerinin 302 yönlendirmesinde korunduğu doğrulandı.
+Kurulum penceresi yenilendi: okul logolu başlık, renkli durum kutusu, numaralı adım kartları (Kurulum, Kayıt, Kısayol) ve büyük onay kodu. İnternetsiz elle kayıt "Gelişmiş" bölümünde. Kurulum bitince tahta parolasız olarak onaya gider; SUPER yönetici BORUSAN DİJİTAL → BB Kilit Yönetim kartından onaylar. Kilit ekranının xfwm4 altında tam ekran açıldığı doğrulandı.
 
-`tahta-kilit_0.1.21_all.deb` paketini mevcut kurulumun üzerine yükleyin ve uygulamayı yeniden başlatın. Ayrı bir `qr_portal_url` yapılandırması kullanılıyorsa onu da https://borusandijital.s.gy/ olarak güncelleyin veya varsayılanı kullanmak için bu özel ayarı kaldırın. Öğretmen portalı, adı BB KILIT olan Vercel kartını seçen güncel Index sürümünü kullanmalıdır.
+# BB Kilit 0.1.26 — PC'de (WSL) test modu
+
+`TAHTA_KILIT_TEST_MODE=1` ile açılan kilit ekranı artık tam ekran yerine normal pencere olarak açılır. Windows'taki WSLg, tam ekran, çerçevesiz ve her zaman üstte tutulan pencereye fare tıklaması iletmediği için PC'de tuşlara basılamıyordu. Tahtadaki oturum servisi test modunu kaldırdığından gerçek Pardus kilidi değişmez, tam ekran kalır. PC'de deneme: `wsl -d Ubuntu -u ogretmen -- env GDK_BACKEND=x11 TAHTA_KILIT_TEST_MODE=1 python3 -m tahta_kilit.lock_screen`.
+
+# BB Kilit 0.1.25 — Parolasız tahta kaydı
+
+Tahta kaydı için ortak yönetici parolası artık gerekmez. Kurulum tamamlanınca tahta, anahtarını BB Kilit servisine **onay isteği** olarak gönderir; internet yoksa **Tahtayı sisteme kaydet (onaya gönder)** düğmesiyle tekrar gönderilir. Kurulum penceresi bir **onay kodu** gösterir (ör. `AB12-CD34`, anahtarın SHA-256 parmak izi). SUPER yetkili yönetici BORUSAN DİJİTAL → U7 kartıyla BB Kilit yönetim paneline girer, **Onay bekleyen tahtalar** bölümünde aynı kodu görürse **Onayla**, görmezse **Reddet** der. Onaylanmamış istek hiçbir açma kodu üretmez ve mevcut kaydın üzerine kendiliğinden yazılmaz; yeniden kurulmuş tahta için panel "mevcut kaydın anahtarını değiştirir" uyarısı gösterir. Sunucu en fazla 50 bekleyen istek tutar. Apps Script tarafı sürüm 18 ile yayında.
+
+# BB Kilit 0.1.24 — Kilit ekranı işlemci döngüsü düzeltmesi
+
+Kilit penceresi görünür olduğunda klavye koruması GLib boşta kuyruğunda durmadan tekrar çalışıyor ve ekrana sürekli tam ekran isteği gönderiyordu (işlemci tam yük; WSLg'de çökme). Artık görünür olma anında tek seferlik deneme yapılıyor, düzenli deneme saniyede bir sürüyor. `tahta-kilit_0.1.24_all.deb` paketini mevcut kurulumun üzerine yükleyin; anahtar, kimlik ve ayarlar korunur. Ubuntu 26.04 (WSL) üzerinde gerçek GTK ve dpkg ile test edildi.
+
+# BB Kilit 0.1.23 — Otomatik tahta kaydı ve panelden QR adresi
+
+**Tahtayı sisteme kaydet (0.1.23–0.1.24, eski yöntem):** BB Kilit Kurulum penceresinde kurulumu tamamladıktan sonra **Yönetici parolası** alanına yönetim paneli parolasını yazıp **Tahtayı sisteme kaydet** düğmesine basın. Sistem yönetici onayından sonra root yardımcısı parolayı yalnız stdin üzerinden alır, yönetim paneline giriş yapar ve tahta anahtarını (`{"TAHTA-ID":"Base64 anahtar"}`, kopyalanan kayıtla aynı biçim) kaydeder. Parola saklanmaz, loglanmaz, komut satırına yazılmaz. Sonuç ekranda gösterilir: başarılı kayıt, yanlış parola/çok fazla deneme, internet yok veya sunucunun ret mesajı (ör. aynı kimlik farklı anahtarla kayıtlı). İnternet yoksa eski yol geçerlidir: **Tahta kaydını kopyala** ile kaydı alıp yönetim paneline yapıştırın. Kayıttan sonra master parola ve QR adresi yaklaşık bir dakika içinde alınır.
+
+**QR adresi panelden:** Yönetici QR kodlarının açacağı adresi panelden istediği zaman değiştirebilir. Tahtadaki root zamanlayıcısı (master eşitlemesiyle aynı, yaklaşık dakikada bir) `portal-sync:v1|tahtaId|nonce` isteğini tahta anahtarıyla HMAC-SHA256 imzalar; yanıt `portal-response:v1|tahtaId|nonce|adres` imzasıyla doğrulanır ve `/etc/tahta-kilit/portal.json` dosyasına (root, 0644) atomik yazılır. Kilit ekranı her yeni QR'da bu dosyayı okur; yeniden başlatma gerekmez. Öncelik: `portal.json` > config `qr_portal_url` > yerleşik kopya site adresi. Sunucuda adres ayarlı değilse son alınan adres korunur; varsayılana dönmek için panelde varsayılan adresi girin. Adres yalnız HTTPS site (`/`, `/ac`) veya Google Apps Script `/exec` adresi olabilir.
+
+`tahta-kilit_0.1.23_all.deb` paketini mevcut kurulumun üzerine yükleyin. Anahtar, tahta kimliği ve master kayıtları korunur. Sunucu tarafında `portal-sync` eylemi yayımlanmalıdır; yayımlanana kadar QR mevcut adresi kullanmaya devam eder. Gerçek ETAP/Pardus üzerinde GTK penceresi, pkexec akışı ve canlı sunucu ile pilot kontrol gerekir.
+
+# BB Kilit 0.1.22 — BORUSAN DIJITAL kopya sitesi
+
+Tahta QR bağlantısının varsayılan hedefi artık BORUSAN DIJITAL'in kopya Google Apps Script yayınıdır:
+https://script.google.com/macros/s/AKfycbw28mmTLV_PD1NboMiz1a8DFibhbZRJihYWA0LzXC_lCUPvJYG5m_l9kKKASyjHkzNa/exec
+QR, v, board, request, nonce ve sig parametrelerini bu adrese taşır. Kopya sitede BB KILIT kartının kodu U6 olmalı ve bağlantısı https://bb-kilit-vercel.vercel.app/ adresine gitmelidir.
+
+`tahta-kilit_0.1.22_all.deb` paketini mevcut kurulumun üzerine yükleyin ve uygulamayı yeniden başlatın. Ayrı bir `qr_portal_url` yapılandırması kullanılıyorsa onu da yukarıdaki adres olarak güncelleyin veya varsayılanı kullanmak için bu özel ayarı kaldırın. Eski kalıcı adrese (https://borusandijital.s.gy/) dönmek için `qr_portal_url` ayarını o adres yapmak yeterlidir.
 
 Bu adres QR ile öğretmen girişini açmak içindir. Tahtanın kod servisi ve master eşitlemesi için kullanılan `site_url` ayarı ayrı kalır; bu ayarı öğretmen giriş adresiyle değiştirmeyin.
 

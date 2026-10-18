@@ -11,11 +11,11 @@ import stat
 import tempfile
 from base64 import b64encode
 
-from tahta_kilit import provision
+from tahta_kilit import board_registration, provision
 from tahta_kilit.protocol import BOARD_ID_PATTERN
 from tahta_kilit.verifier_service import read_config, read_key
 from tahta_kilit.shortcut_protection import protect_shortcut
-from tahta_kilit.site_url import validate_site_url
+from tahta_kilit.site_url import resolve_site_url, validate_site_url
 
 
 def configure(arguments):
@@ -27,6 +27,8 @@ def configure(arguments):
     caller = pwd.getpwuid(int(caller_text))
     if caller.pw_uid < 1000 or caller.pw_shell in ("/usr/sbin/nologin", "/bin/false"):
         raise PermissionError("Kurulumu standart grafik oturum hesabında açın.")
+    if arguments == ["--register-board"]:
+        return register_board()
     if len(arguments) == 2 and arguments[0] in ("--protect-shortcut", "--unprotect-shortcut"):
         return protect_shortcut(caller, arguments[1], arguments[0] == "--protect-shortcut")
     if len(arguments) not in (2, 3):
@@ -98,12 +100,41 @@ def configure(arguments):
             result.update(protect_shortcut(caller, arguments[2]))
         except (OSError, ValueError, PermissionError):
             result["shortcutProtected"] = False
+    # Kurulum biter bitmez kayıt isteği gönderilir; internet yoksa düğmeyle tekrarlanır.
+    try:
+        result["registration"] = send_registration(config, key)
+    except board_registration.RegistrationError as error:
+        result["registrationError"] = str(error)
     return result
+
+
+def send_registration(config, key):
+    """Parolasız kayıt isteği; sunucuda onay bekler veya zaten kayıtlıdır."""
+    result = board_registration.register(resolve_site_url(config["site_url"]), config["board_id"], key)
+    if result["status"] == "registered":
+        # Master parola ve QR portal adresi beklemeden alınsın; hata kaydı engellemez.
+        try:
+            subprocess.run(["/usr/bin/systemctl", "start", "--no-block", "tahta-kilit-master-sync.service"],
+                           check=False, capture_output=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return {"registered": result["status"] == "registered", "pending": result["status"] == "pending",
+            "boardId": result["boardId"], "fingerprint": result["fingerprint"]}
+
+
+def register_board():
+    """Tahta anahtarını kod servisine onay isteği olarak gönderir (root, parolasız)."""
+    if not (os.path.lexists(provision.KEY_PATH) and os.path.lexists(provision.CONFIG_PATH)):
+        raise board_registration.RegistrationError("Önce kurulumu tamamlayın; tahta anahtarı henüz oluşturulmadı.")
+    return send_registration(read_config(), read_key())
 
 
 def main():
     try:
         result = configure(sys.argv[1:])
+    except board_registration.RegistrationError as error:
+        print(str(error), file=sys.stderr)
+        return 1
     except SystemExit:
         print("Tahta kimliği veya HTTPS web adresi geçersiz.", file=sys.stderr)
         return 1

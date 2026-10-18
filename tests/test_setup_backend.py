@@ -1,5 +1,7 @@
 """Kurulum yetkisi, mevcut anahtarın korunması ve sınırlı servis işlemleri."""
 import contextlib
+import io
+import json
 import os
 import sys
 import unittest
@@ -23,7 +25,8 @@ class SetupBackendTests(unittest.TestCase):
         self.run = self.stack.enter_context(patch.object(backend.subprocess, "run"))
 
     def test_existing_key_is_preserved_and_group_matches_caller(self):
-        result = backend.configure(["IGNORED", "https://example.org/ac"])
+        # Aynı kimlik ve adresle yeniden kurulum: anahtar ve ayar dosyası yeniden yazılmaz (0.1.14'ten beri kimlik değiştirilebilir).
+        result = backend.configure(["ETAP-01", "https://example.org/ac"])
         self.provision.assert_not_called()
         self.assertTrue(result["existing"])
         self.assertEqual(result["boardId"], "ETAP-01")
@@ -68,6 +71,46 @@ class SetupBackendTests(unittest.TestCase):
         self.assertIs(sys.argv, previous)
         self.assertFalse(result["existing"])
 
+    def test_registration_is_passwordless_and_reports_pending(self):
+        pending = {"status": "pending", "fingerprint": "ABCD-1234", "boardId": "ETAP-01"}
+        with patch.object(backend.board_registration, "register", return_value=pending) as register:
+            result = backend.configure(["--register-board"])
+        self.assertEqual(result, {"registered": False, "pending": True, "boardId": "ETAP-01", "fingerprint": "ABCD-1234"})
+        register.assert_called_once_with("https://example.org/ac", "ETAP-01", b"k" * 32)
+        self.run.assert_not_called()
+
+    def test_registered_board_starts_master_sync(self):
+        done = {"status": "registered", "fingerprint": "ABCD-1234", "boardId": "ETAP-01"}
+        with patch.object(backend.board_registration, "register", return_value=done):
+            result = backend.configure(["--register-board"])
+        self.assertTrue(result["registered"])
+        self.assertEqual(self.run.call_args_list[-1].args[0], ["/usr/bin/systemctl", "start", "--no-block", "tahta-kilit-master-sync.service"])
+
+    def test_setup_sends_registration_and_tolerates_failure(self):
+        pending = {"status": "pending", "fingerprint": "ABCD-1234", "boardId": "ETAP-01"}
+        with patch.object(backend.board_registration, "register", return_value=pending):
+            result = backend.configure(["ETAP-01", "https://example.org/ac"])
+        self.assertTrue(result["registration"]["pending"])
+        error = backend.board_registration.RegistrationError(backend.board_registration.NO_INTERNET)
+        with patch.object(backend.board_registration, "register", side_effect=error):
+            result = backend.configure(["ETAP-01", "https://example.org/ac"])
+        self.assertIn("İnternet bağlantısı yok", result["registrationError"])
+        self.assertTrue(result["existing"])
+
+    def test_registration_requires_root_and_polkit_caller(self):
+        self.euid.return_value = 1000
+        with patch.object(backend.board_registration, "register") as register:
+            with self.assertRaises(PermissionError):
+                backend.configure(["--register-board"])
+        register.assert_not_called()
+
+    def test_registration_error_is_reported_on_stderr(self):
+        stderr, stdout = io.StringIO(), io.StringIO()
+        error = backend.board_registration.RegistrationError(backend.board_registration.NO_INTERNET)
+        with patch.object(backend.sys, "argv", ["setup-helper", "--register-board"]),                 patch.object(backend.board_registration, "register", side_effect=error),                 contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(stdout):
+            self.assertEqual(backend.main(), 1)
+        self.assertIn("İnternet bağlantısı yok", stderr.getvalue())
+        self.assertEqual(stdout.getvalue(), "")
 
 if __name__ == "__main__":
     unittest.main()

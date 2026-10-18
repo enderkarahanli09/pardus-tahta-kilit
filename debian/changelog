@@ -1,3 +1,58 @@
+tahta-kilit (0.1.27) unstable; urgency=medium
+
+  * Redesign the setup window: header with school logo, coloured status box,
+    numbered step cards, large approval code, manual record under "Gelişmiş",
+    scrollable on small screens. Behaviour unchanged.
+  * Verified the lock screen is fullscreen under xfwm4 (Pardus window manager).
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Sun, 18 Oct 2026 21:30:00 +0300
+
+tahta-kilit (0.1.26) unstable; urgency=medium
+
+  * Test mode (TAHTA_KILIT_TEST_MODE=1) opens the lock screen as a normal
+    window: WSLg does not deliver mouse clicks to fullscreen, undecorated,
+    keep-above windows. The session service still unsets test mode.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Sun, 18 Oct 2026 20:30:00 +0300
+
+tahta-kilit (0.1.25) unstable; urgency=medium
+
+  * Register boards without the shared administrator password: setup sends a
+    board-register request and the server keeps it pending until a SUPER
+    administrator approves it in the BB Kilit management panel.
+  * Show the same approval code (SHA-256 key fingerprint) on the board and in
+    the panel; verify the server echoes it.
+  * Send the registration request automatically right after setup.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Sun, 18 Oct 2026 19:30:00 +0300
+
+tahta-kilit (0.1.24) unstable; urgency=medium
+
+  * Fix an endless idle loop when the lock window is mapped: the keyboard guard
+    callback returned True, so GLib re-ran it continuously and flooded the
+    display with fullscreen requests (100% CPU; crash under WSLg).
+  * Update outdated tests; verified on Ubuntu 26.04 (WSL) with real GTK and dpkg.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Sun, 18 Oct 2026 19:00:00 +0300
+
+tahta-kilit (0.1.23) unstable; urgency=medium
+
+  * Add "Tahtayı sisteme kaydet": register the board key with the administrator
+    password from the setup window (root helper, password via stdin only).
+  * Keep "Tahta kaydını kopyala" as the manual fallback.
+  * Fetch the QR portal URL from the server with an HMAC-signed portal-sync
+    request; store it in /etc/tahta-kilit/portal.json (root, 0644).
+  * QR URL precedence: portal.json > config qr_portal_url > built-in default.
+  * Run portal sync from the master sync timer; raise its timeout to 90 s.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Sat, 17 Oct 2026 12:00:00 +0300
+
+tahta-kilit (0.1.22) unstable; urgency=medium
+
+  * Point board QR links to the BORUSAN DIJITAL copy Apps Script deployment.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Sat, 17 Oct 2026 00:00:00 +0300
+
 tahta-kilit (0.1.21) unstable; urgency=medium
 
   * Use the stable borusandijital.s.gy portal URL in board QR links.

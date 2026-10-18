@@ -13,11 +13,24 @@ window.complete({
     "siteUrl": "https://example.org/ac",
     "existing": True,
     "boardKeysEntry": {"ETAP-DEMO": "DEMO-ONLY"},
+    "registrationError": "İnternet bağlantısı yok",
 }, None)
 assert not window.key.get_visibility()
 assert window.copy.get_sensitive()
 assert window.board.get_text() == "ETAP-DEMO"
 assert "Mevcut anahtar korundu" in window.status.get_text()
+assert "Otomatik kayıt yapılamadı: İnternet bağlantısı yok" in window.status.get_text()
+assert "onaya gönderildi" not in window.status.get_text()
+assert not hasattr(window, "password")
+window.complete({"registered": False, "pending": True, "boardId": "ETAP-DEMO", "fingerprint": "ABCD-1234"}, None)
+assert "Onay kodu: ABCD-1234" in window.status.get_text()
+assert window.code_label.get_text() == "ABCD-1234" and window.code_revealer.get_reveal_child()
+window.complete({"registered": True, "pending": False, "boardId": "ETAP-DEMO", "fingerprint": "ABCD-1234"}, None)
+assert "sisteme kayıtlı" in window.status.get_text()
+assert not window.code_revealer.get_reveal_child()
+window.complete(None, "Yönetici onayı verilmedi.")
+assert window.status_box.get_style_context().has_class("error")
+assert window.register_button.get_sensitive()
 root = Path(__file__).resolve().parent.parent
 policy = ET.parse(root / "share/org.tahtakilit.setup.policy")
 action = policy.find("action")
