@@ -1,0 +1,12 @@
+[Unit]
+Description=BB Kilit otomatik tanı ve doğrulama servisi onarımı
+After=tahta-kilit-verifier.service network-online.target
+
+[Service]
+Type=oneshot
+User=root
+# Kilit ekranının gösterdiği rapor /run/bb-kilit-tani/rapor.txt (0644, sır içermez).
+ExecStart=/usr/bin/python3 -I -m tahta_kilit.tani --ekran
+TimeoutStartSec=120
+UMask=0022
+PrivateTmp=true

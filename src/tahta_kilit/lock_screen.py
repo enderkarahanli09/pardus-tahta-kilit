@@ -1,8 +1,11 @@
 """BB Kilit tam ekran oturum arayüzü; kilitliyken dokunmatik kod girişi."""
 
+import datetime
+import grp
 import json
 import os
 import socket
+import subprocess
 from io import BytesIO
 from tahta_kilit.qr_portal import DEFAULT_QR_PORTAL_URL, build_portal_qr_url
 from tahta_kilit.portal_sync import resolve_qr_portal_url
@@ -12,7 +15,7 @@ import qrcode
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango
 
 CONFIG_PATH = "/etc/tahta-kilit/config.json"
 SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
@@ -23,6 +26,9 @@ TEST_MODE = os.environ.get("TAHTA_KILIT_TEST_MODE") == "1"
 COMPACT_MAX_HEIGHT = 900
 QR_SIZE = 320
 COMPACT_QR_SIZE = 240
+# Root tanı zamanlayıcısının (tahta-kilit-tani.timer) kilit ekranı için yazdığı rapor.
+DIAGNOSIS_REPORT_PATH = "/run/bb-kilit-tani/rapor.txt"
+UNIT_PROPERTIES = "LoadState,ActiveState,SubState,Result,ExecMainStatus,NRestarts,UnitFileState"
 
 COLORS = {
     "background": "#0b0b0d",
@@ -71,6 +77,50 @@ def verifier_error_message(error):
     if isinstance(error, (FileNotFoundError, ConnectionRefusedError)):
         return "Doğrulama servisi çalışmıyor. Yönetici: systemctl status tahta-kilit-verifier.service"
     return "Yerel doğrulama servisi yanıt vermedi. Tahtayı yeniden başlatıp tekrar deneyin."
+
+
+def unit_state(unit):
+    # systemctl show yetkisiz kullanıcıyla da çalışır (D-Bus üzerinden salt okunur).
+    try:
+        result = subprocess.run(["systemctl", "show", unit, "-p", UNIT_PROPERTIES],
+                                capture_output=True, text=True, timeout=5)
+        return " ".join(result.stdout.split()) or result.stderr.strip() or "?"
+    except (OSError, subprocess.SubprocessError) as error:
+        return "okunamadı ({})".format(type(error).__name__)
+
+
+def collect_diagnosis():
+    """Kilit ekranının gösterdiği tanı metni: bu oturumdan canlı durum + root tanı raporu."""
+    lines = ["CANLI DURUM (bu oturum)"]
+    try:
+        group_id = grp.getgrnam("tahta-kilit").gr_gid
+        in_group = group_id in os.getgroups() or os.getgid() == group_id
+        lines.append("tahta-kilit grubu: " + ("var" if in_group else "YOK → tahtayı yeniden başlatın"))
+    except KeyError:
+        lines.append("tahta-kilit grubu: sistemde yok → paketi yeniden kurun")
+    try:
+        os.stat(SOCKET_PATH)
+        lines.append("Doğrulama soketi: var")
+    except FileNotFoundError:
+        lines.append("Doğrulama soketi: YOK → doğrulama servisi çalışmıyor")
+    except PermissionError:
+        lines.append("Doğrulama soketi: erişim izni yok → grup bu oturumda geçerli değil")
+    lines.append("Doğrulama servisi: " + unit_state("tahta-kilit-verifier.service"))
+    lines.append("Master eşitleme: " + unit_state("tahta-kilit-master-sync.service"))
+    lines.append("Tanı zamanlayıcısı: " + unit_state("tahta-kilit-tani.timer"))
+    lines.append("")
+    try:
+        with open(DIAGNOSIS_REPORT_PATH, encoding="utf-8") as stream:
+            report = stream.read(200000)
+        written = datetime.datetime.fromtimestamp(os.path.getmtime(DIAGNOSIS_REPORT_PATH))
+        lines.append("OTOMATİK TANI RAPORU · " + written.strftime("%H:%M:%S"))
+        lines.append(report)
+    except FileNotFoundError:
+        lines.append("Otomatik tanı raporu henüz yok. Açılıştan yaklaşık 30 saniye sonra hazır olur; "
+                     "'Yenile'ye basın. Uzun süre gelmezse tanı zamanlayıcısı çalışmıyordur.")
+    except OSError as error:
+        lines.append("Otomatik tanı raporu okunamadı ({}).".format(type(error).__name__))
+    return "\n".join(lines)
 
 
 def build_qr_url(site_url, challenge, portal_url=DEFAULT_QR_PORTAL_URL):
@@ -163,6 +213,7 @@ class LockScreen:
         button.confirm:hover { background: #d55a0c; }
         button.key:disabled { background: #242426; color: #929299; border-color: #39393e; }
         button.small { font-size: 17px; }
+        .report { color: %(text)s; font-family: monospace; font-size: 13px; }
         .compact .panel { border-radius: 18px; padding: 14px 18px; }
         .compact .title { font-size: 28px; }
         .compact .brand-name { font-size: 15px; }
@@ -230,7 +281,12 @@ class LockScreen:
 
         content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
         content.get_style_context().add_class("panel")
-        root.pack_start(content, False, False, 0)
+        # Kilit paneli ile tanı paneli aynı yerde yer değiştirir; tanı paneli kilit panelinin boyutunu alır.
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        self.stack.add_named(content, "kilit")
+        self.stack.add_named(self.build_diagnosis_panel(), "tani")
+        root.pack_start(self.stack, False, False, 0)
 
         qr_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6 if compact else 10)
         qr_column.set_halign(Gtk.Align.CENTER)
@@ -253,6 +309,9 @@ class LockScreen:
         self.qr_countdown = Gtk.Label(label="")
         self.qr_countdown.get_style_context().add_class("status")
         qr_column.pack_start(self.qr_countdown, False, False, 0)
+        # Klavyesiz tahtada sorunun nedenini görmenin yolu: dokunmatik tanı düğmesi.
+        qr_column.pack_start(self.make_button("Hata ayrıntısı / Tanı", self.show_diagnosis, small=True),
+                             False, False, 0)
         content.pack_start(qr_column, False, False, 0)
 
         keypad_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7 if compact else 12)
@@ -314,6 +373,43 @@ class LockScreen:
         scroll.add(root)
         self.window.add(scroll)
         self.window.show_all()
+
+    def build_diagnosis_panel(self):
+        panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        panel.get_style_context().add_class("panel")
+        caption = Gtk.Label(label="TANI RAPORU")
+        caption.get_style_context().add_class("section-title")
+        panel.pack_start(caption, False, False, 0)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_kinetic_scrolling(True)
+        scroll.set_size_request(-1, 120)
+        self.diagnosis_label = Gtk.Label(label="")
+        self.diagnosis_label.set_line_wrap(True)
+        # Uzun günlük satırları/yollar boşluksuz da kırılsın; panel genişliği taşmasın.
+        self.diagnosis_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        self.diagnosis_label.set_xalign(0)
+        self.diagnosis_label.set_yalign(0)
+        self.diagnosis_label.set_max_width_chars(90)
+        self.diagnosis_label.get_style_context().add_class("report")
+        scroll.add(self.diagnosis_label)
+        panel.pack_start(scroll, True, True, 0)
+        buttons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=9)
+        buttons.set_homogeneous(True)
+        buttons.pack_start(self.make_button("Yenile", self.refresh_diagnosis, small=True), True, True, 0)
+        buttons.pack_start(self.make_button("Kilide dön", self.hide_diagnosis, small=True, confirm=True), True, True, 0)
+        panel.pack_start(buttons, False, False, 0)
+        return panel
+
+    def show_diagnosis(self):
+        self.refresh_diagnosis()
+        self.stack.set_visible_child_name("tani")
+
+    def refresh_diagnosis(self):
+        self.diagnosis_label.set_text(collect_diagnosis())
+
+    def hide_diagnosis(self):
+        self.stack.set_visible_child_name("kilit")
 
     @staticmethod
     def make_button(label, callback, small=False, confirm=False):

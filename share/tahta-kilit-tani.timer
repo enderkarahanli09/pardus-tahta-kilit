@@ -1,0 +1,10 @@
+[Unit]
+Description=BB Kilit otomatik tanı (açılışta ve iki dakikada bir)
+
+[Timer]
+OnBootSec=20
+OnUnitActiveSec=120
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target

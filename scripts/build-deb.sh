@@ -31,6 +31,7 @@ mkdir -p \
 install -m 0644 "$PROJECT_DIR"/src/tahta_kilit/*.py \
     "$PACKAGE_ROOT/usr/lib/python3/dist-packages/tahta_kilit/"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-master-sync.service" "$PROJECT_DIR/share/tahta-kilit-master-sync.timer" "$PACKAGE_ROOT/lib/systemd/system/"
+install -m 0644 "$PROJECT_DIR/share/tahta-kilit-tani.service" "$PROJECT_DIR/share/tahta-kilit-tani.timer" "$PACKAGE_ROOT/lib/systemd/system/"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-verifier.service" \
     "$PACKAGE_ROOT/lib/systemd/system/tahta-kilit-verifier.service"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-ui.service" \

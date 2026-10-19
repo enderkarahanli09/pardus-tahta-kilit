@@ -19,6 +19,7 @@ import socket
 import stat
 import subprocess
 import sys
+import time
 
 from tahta_kilit.google_http import describe_error
 
@@ -31,16 +32,20 @@ RUN_DIR = "/run/tahta-kilit"
 SOCKET_PATH = RUN_DIR + "/verifier.sock"
 GROUP = "tahta-kilit"
 REPORT_PATH = "/var/log/bb-kilit-tani.txt"
+SCREEN_DIR = "/run/bb-kilit-tani"
+SCREEN_REPORT_PATH = SCREEN_DIR + "/rapor.txt"
 SYSTEM_UNITS = ("tahta-kilit-verifier.service", "tahta-kilit-master-sync.timer", "tahta-kilit-master-sync.service")
 
 
 class Report:
-    def __init__(self):
+    def __init__(self, quiet=False):
         self.lines = []
         self.problems = []
+        self.quiet = quiet
 
     def write(self, text=""):
-        print(text)
+        if not self.quiet:
+            print(text)
         self.lines.append(text)
 
     def section(self, title):
@@ -325,7 +330,7 @@ def check_socket(report):
                       "_SYSTEMD_USER_UNIT=tahta-kilit-ui.service"])[1])
 
 
-def check_server(report, config, key):
+def check_server(report, config, key, allow_register=True):
     report.section("Sunucu (Google Apps Script)")
     if not config or not key:
         report.fail("Yapılandırma/anahtar okunamadığı için sunucu denenmedi")
@@ -370,7 +375,10 @@ def check_server(report, config, key):
     except Exception as error:
         report.warn("portal-sync başarısız: " + describe_error(error))
 
-    if not master_ok:
+    if not master_ok and not allow_register:
+        report.info("Kayıt durumu otomatik denetimde sorulmaz (sunucuda bekleyen kayıt oluşturabilir); "
+                    "kurulum uygulamasındaki 'Kaydı gönder' ile veya sudo bb-kilit-tani ile denetlenir")
+    if not master_ok and allow_register:
         # "Kaydı tekrar gönder" düğmesiyle aynı istek: anahtar zaten onaylıysa yalnız 'registered' döner.
         from tahta_kilit import board_registration
         try:
@@ -442,33 +450,75 @@ def save(report, usb):
         print("Takılı USB bellek bulunamadı (önce masaüstünde açılmalı/bağlanmalı).")
 
 
-def diagnose(report):
+def auto_repair(report):
+    """Zamanlayıcıdan: doğrulama servisi çalışmıyorsa sıfırlayıp yeniden başlatır (dosyalara dokunmaz)."""
+    _, active = run(["systemctl", "is-active", "tahta-kilit-verifier.service"])
+    if active == "active" or not (os.path.exists(CONFIG_PATH) and os.path.exists(KEY_PATH)):
+        return
+    report.section("Otomatik onarım")
+    report.info("Doğrulama servisi '{}' durumundaydı; yeniden başlatılıyor".format(active))
+    for command in (["systemctl", "reset-failed", "tahta-kilit-verifier.service"],
+                    ["systemctl", "enable", "--now", "tahta-kilit-verifier.service"],
+                    ["systemctl", "restart", "tahta-kilit-verifier.service"]):
+        code, output = run(command, timeout=60)
+        (report.ok if code == 0 else report.warn)(" ".join(command[1:]) + ("" if code == 0 else ": " + output[-300:]))
+    # Python'un açılıp soketi oluşturması birkaç saniye sürer; denetim hemen yapılırsa yanlış "yok" görünür.
+    for _ in range(20):
+        if os.path.exists(SOCKET_PATH):
+            break
+        time.sleep(0.5)
+
+
+def diagnose(report, allow_register=True):
     report.write("BB Kilit tanı raporu · " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     check_package(report)
     config, key = check_files(report)
     check_services(report)
     check_socket(report)
-    check_server(report, config, key)
+    check_server(report, config, key, allow_register)
+
+
+def summary_lines(report):
+    if not report.problems:
+        return ["Sorun bulunmadı."]
+    return ["{}. {}".format(index, problem) for index, problem in enumerate(report.problems, 1)]
+
+
+def save_screen_report(report):
+    """Kilit ekranının (normal kullanıcı) okuyacağı rapor: önce özet, sonra ayrıntı."""
+    os.makedirs(SCREEN_DIR, mode=0o755, exist_ok=True)
+    os.chmod(SCREEN_DIR, 0o755)
+    text = "\n".join(["ÖZET"] + summary_lines(report) + ["", "AYRINTI"] + report.lines) + "\n"
+    temporary = SCREEN_REPORT_PATH + ".tmp"
+    with open(temporary, "w", encoding="utf-8") as output:
+        output.write(text)
+    os.chmod(temporary, 0o644)
+    os.replace(temporary, SCREEN_REPORT_PATH)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="bb-kilit-tani", description="BB Kilit kurulumunu denetler.")
     parser.add_argument("--onar", action="store_true", help="güvenli onarımları uygula ve yeniden denetle")
     parser.add_argument("--usb", action="store_true", help="raporu takılı USB belleğe kopyala")
+    parser.add_argument("--ekran", action="store_true",
+                        help="zamanlayıcı kipi: servis düşmüşse yeniden başlat, raporu kilit ekranı için yaz")
     args = parser.parse_args(argv)
     if os.geteuid() != 0:
         print("Bu araç root yetkisi ister: sudo bb-kilit-tani")
         return 2
-    report = Report()
+    report = Report(quiet=args.ekran)
     if args.onar:
         repair(report)
-    diagnose(report)
+    if args.ekran:
+        auto_repair(report)
+    diagnose(report, allow_register=not args.ekran)
     report.section("ÖZET")
-    if report.problems:
-        for index, problem in enumerate(report.problems, 1):
-            report.write("{}. {}".format(index, problem))
-    else:
-        report.write("Sorun bulunmadı.")
+    for line in summary_lines(report):
+        report.write(line)
+    if args.ekran:
+        save_screen_report(report)
+        print("Tanı raporu yazıldı; {} sorun".format(len(report.problems)))
+        return 0
     save(report, args.usb)
     return 1 if report.problems else 0
 

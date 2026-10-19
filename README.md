@@ -1,3 +1,7 @@
+# BB Kilit 0.1.29 — Kilit ekranında dokunmatik tanı
+
+Klavyesi olmayan tahtalar için kilit ekranına **Hata ayrıntısı / Tanı** düğmesi eklendi. Düğme, bu oturumun canlı durumunu (grup, doğrulama soketi, servis durumları) ve root tanı zamanlayıcısının son raporunu kaydırılabilir bir panelde gösterir. Yeni `tahta-kilit-tani.timer` açılıştan 20 saniye sonra ve iki dakikada bir çalışır; doğrulama servisi düşmüşse sıfırlayıp yeniden başlatır ve raporu `/run/bb-kilit-tani/rapor.txt` dosyasına yazar. Otomatik çalışma sunucuya kayıt isteği göndermez. `tahta-kilit_0.1.29_all.deb` paketini mevcut kurulumun üzerine yükleyin; anahtar, kimlik ve ayarlar korunur.
+
 # BB Kilit 0.1.28 — Tanı aracı
 
 Yeni `bb-kilit-tani` komutu tahtadaki kurulumu baştan sona denetler: dosya izinleri, servisler, doğrulama soketi (kilit ekranının kendi kimliğiyle de), master ve QR portal eşitlemesi, sunucudaki kayıt durumu. Raporu `/var/log/bb-kilit-tani.txt` dosyasına yazar; rapor anahtar, master özeti veya imza içermez. Kilit açıkken Ctrl+Alt+F3 ile konsola geçip `sudo bb-kilit-tani` çalıştırın; `--onar` servisleri etkinleştirip yeniden başlatır ve master'ı eşitler, `--usb` raporu takılı USB belleğe kopyalar. Ayrıca master/portal eşitleme hataları artık günlüğe hata türüyle yazılır, kilit ekranı 1366×768 gibi kısa ekranlarda sıkışık düzene geçer ve servis hatasını daha açık anlatır. `tahta-kilit_0.1.28_all.deb` paketini mevcut kurulumun üzerine yükleyin; anahtar, kimlik ve ayarlar korunur. Ubuntu 26.04 (WSL) üzerinde paket kurulup araç çalıştırılarak denendi.

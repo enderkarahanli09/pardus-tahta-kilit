@@ -7,3 +7,5 @@ share/tahta-kilit-setup.desktop usr/share/applications
 share/org.tahtakilit.setup.policy usr/share/polkit-1/actions
 share/setup-helper usr/lib/tahta-kilit
 share/bb-kilit-tani usr/bin
+share/tahta-kilit-tani.service lib/systemd/system
+share/tahta-kilit-tani.timer lib/systemd/system

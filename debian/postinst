@@ -8,6 +8,9 @@ if [ "$1" = "configure" ]; then
     install -d -o root -g tahta-kilit -m 0750 /etc/tahta-kilit
     systemctl daemon-reload
     systemctl enable --now tahta-kilit-master-sync.timer
+    # Otomatik tanı: kilit ekranındaki "Hata ayrıntısı" raporunu üretir, düşen doğrulama servisini kaldırır.
+    systemctl enable --now tahta-kilit-tani.timer || true
+    systemctl start --no-block tahta-kilit-tani.service || true
     if [ -f /etc/tahta-kilit/config.json ] && [ -f /etc/tahta-kilit/board.key ]; then
         # Güncellemede mevcut anahtarları koru, yalnız çalışan doğrulayıcıyı yenile.
         systemctl try-restart tahta-kilit-verifier.service
