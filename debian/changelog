@@ -1,3 +1,14 @@
+tahta-kilit (0.1.28) unstable; urgency=medium
+
+  * New diagnostic tool: sudo bb-kilit-tani [--onar] [--usb]. Checks files,
+    services, the verifier socket (also with the lock screen's own identity),
+    master/portal sync and registration state; writes /var/log/bb-kilit-tani.txt.
+  * Master/portal sync logs the error kind (HTTP code, errno) to the journal.
+  * Lock screen: compact layout for screens shorter than 900 px (1366x768)
+    and clearer verifier error messages (group not active vs service down).
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Mon, 19 Oct 2026 14:00:00 +0300
+
 tahta-kilit (0.1.27) unstable; urgency=medium
 
   * Redesign the setup window: header with school logo, coloured status box,

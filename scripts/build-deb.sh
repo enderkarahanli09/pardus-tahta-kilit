@@ -40,6 +40,9 @@ sed 's/\r$//' "$PROJECT_DIR/share/start-ui.sh" > \
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/start-ui.sh"
 sed 's/\r$//' "$PROJECT_DIR/share/setup-helper" > "$PACKAGE_ROOT/usr/lib/tahta-kilit/setup-helper"
 chmod 0755 "$PACKAGE_ROOT/usr/lib/tahta-kilit/setup-helper"
+mkdir -p "$PACKAGE_ROOT/usr/bin"
+sed 's/\r$//' "$PROJECT_DIR/share/bb-kilit-tani" > "$PACKAGE_ROOT/usr/bin/bb-kilit-tani"
+chmod 0755 "$PACKAGE_ROOT/usr/bin/bb-kilit-tani"
 install -m 0644 "$PROJECT_DIR/share/tahta-kilit-setup.desktop" "$PACKAGE_ROOT/usr/share/applications/tahta-kilit-setup.desktop"
 install -m 0644 "$PROJECT_DIR/share/bb-kilit.desktop" "$PACKAGE_ROOT/usr/share/applications/bb-kilit.desktop"
 if [ -f "$PROJECT_DIR/share/assets/borusan-mtal-logo.png" ]; then

@@ -18,6 +18,25 @@ class GoogleRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def describe_error(error):
+    """Log/tanı için hata türü ve kısa, sır içermeyen ayrıntı (HTTP kodu, errno, ağ nedeni)."""
+    import socket
+    import urllib.error
+    name = type(error).__name__
+    if isinstance(error, urllib.error.HTTPError):
+        return "{} (HTTP {})".format(name, error.code)
+    if isinstance(error, urllib.error.URLError):
+        return "{} ({})".format(name, describe_error(error.reason) if isinstance(error.reason, BaseException) else str(error.reason)[:120])
+    if isinstance(error, (socket.timeout, TimeoutError)):
+        return "zaman aşımı ({})".format(name)
+    if isinstance(error, OSError) and error.errno is not None:
+        return "{} (errno {}: {})".format(name, error.errno, (error.strerror or "")[:80])
+    if isinstance(error, (ValueError, KeyError, PermissionError)):
+        # Bu paketteki ValueError/PermissionError iletileri sabit metinlerdir; sır taşımaz.
+        return "{}: {}".format(name, str(error)[:160])
+    return name
+
+
 def build_opener():
     # Ortam vekil ayarları yok sayılır; yönlendirme yalnız Google alanlarına izinlidir.
     return urllib.request.build_opener(urllib.request.ProxyHandler({}), GoogleRedirect())

@@ -68,26 +68,28 @@ def matches(board_id, candidate):
     return matched
 
 
-def synchronize():
-    from tahta_kilit.verifier_service import read_config, read_key
+def fetch_master(config, key, opener=None):
+    """Sunucudan imzası doğrulanmış master kaydını döndürür; sunucu reddederse None.
+
+    Sunucu tahta anahtarını tanımıyorsa veya BB_MASTER yoksa yalnız {"ok": false} döner.
+    """
     from tahta_kilit.site_url import resolve_site_url
-    config, key = read_config(), read_key()
     url = resolve_site_url(config["site_url"])
     if urlsplit(url).hostname != "script.google.com":
-        return
+        return None
     board = config["board_id"]
     nonce = secrets.token_hex(16)
     signature = base64.urlsafe_b64encode(hmac.new(key, ("master-sync:v1|" + board + "|" + nonce).encode("ascii"), hashlib.sha256).digest()).decode().rstrip("=")
     body = json.dumps({"action":"master-sync", "format":2, "boardId":board, "nonce":nonce, "signature":signature}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type":"application/json"})
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), GoogleRedirect())
+    opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), GoogleRedirect())
     with opener.open(req, timeout=20) as response:
         raw = response.read(4097)
     if len(raw) > 4096:
         raise ValueError("Response too large")
     data = json.loads(raw)
     if data.get("ok") is not True or data.get("boardId") != board or data.get("nonce") != nonce:
-        return
+        return None
     validate_state(data)
     if "entries" in data:
         fields = ["master-response:v2", board, nonce, str(data["version"]), str(data["iterations"])]
@@ -99,6 +101,17 @@ def synchronize():
     expected = base64.urlsafe_b64encode(hmac.new(key, message.encode("ascii"), hashlib.sha256).digest()).decode().rstrip("=")
     if not isinstance(data.get("signature"), str) or not hmac.compare_digest(expected, data["signature"]):
         raise ValueError("Invalid master signature")
+    return data
+
+
+def synchronize():
+    from tahta_kilit.verifier_service import read_config, read_key
+    config, key = read_config(), read_key()
+    data = fetch_master(config, key)
+    if data is None:
+        print("Sunucu master kaydı vermedi (tahta onaylı değil veya master parola ayarlanmamış).")
+        return
+    board = config["board_id"]
     old = read_state(board)
     if old and (data["version"] < old["version"] or (data["version"] == old["version"] and len(old.get("entries", [old])) >= len(data.get("entries", [data])))):
         return
@@ -121,15 +134,16 @@ def synchronize():
 
 
 if __name__ == "__main__":
+    from tahta_kilit.google_http import describe_error
     try:
         synchronize()
-    except Exception:
-        # Never log HTTP request, authentication material or master verifier.
-        print("Master parola güncellenemedi; mevcut çevrimdışı kayıt korunuyor.")
+    except Exception as error:
+        # Never log HTTP request, authentication material or master verifier; only the error kind.
+        print("Master parola güncellenemedi; mevcut çevrimdışı kayıt korunuyor. Neden: " + describe_error(error))
     try:
         # QR portal adresi ayrı denenir; master hatası bunu engellemez.
         from tahta_kilit.portal_sync import synchronize_portal
         synchronize_portal()
-    except Exception:
-        # Adres, anahtar veya istek ayrıntısı loglanmaz.
-        print("QR portal adresi güncellenemedi; mevcut adres kullanılmaya devam ediyor.")
+    except Exception as error:
+        # Adres, anahtar veya istek ayrıntısı loglanmaz; yalnız hata türü.
+        print("QR portal adresi güncellenemedi; mevcut adres kullanılmaya devam ediyor. Neden: " + describe_error(error))

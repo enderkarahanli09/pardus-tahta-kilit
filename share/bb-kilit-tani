@@ -1,0 +1,6 @@
+#!/bin/sh
+# BB Kilit tanı aracı; ayrıntı: python3 -m tahta_kilit.tani --help
+if [ "$(id -u)" -ne 0 ]; then
+    exec sudo /usr/bin/python3 -I -m tahta_kilit.tani "$@"
+fi
+exec /usr/bin/python3 -I -m tahta_kilit.tani "$@"

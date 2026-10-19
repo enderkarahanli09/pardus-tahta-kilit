@@ -1,3 +1,7 @@
+# BB Kilit 0.1.28 — Tanı aracı
+
+Yeni `bb-kilit-tani` komutu tahtadaki kurulumu baştan sona denetler: dosya izinleri, servisler, doğrulama soketi (kilit ekranının kendi kimliğiyle de), master ve QR portal eşitlemesi, sunucudaki kayıt durumu. Raporu `/var/log/bb-kilit-tani.txt` dosyasına yazar; rapor anahtar, master özeti veya imza içermez. Kilit açıkken Ctrl+Alt+F3 ile konsola geçip `sudo bb-kilit-tani` çalıştırın; `--onar` servisleri etkinleştirip yeniden başlatır ve master'ı eşitler, `--usb` raporu takılı USB belleğe kopyalar. Ayrıca master/portal eşitleme hataları artık günlüğe hata türüyle yazılır, kilit ekranı 1366×768 gibi kısa ekranlarda sıkışık düzene geçer ve servis hatasını daha açık anlatır. `tahta-kilit_0.1.28_all.deb` paketini mevcut kurulumun üzerine yükleyin; anahtar, kimlik ve ayarlar korunur. Ubuntu 26.04 (WSL) üzerinde paket kurulup araç çalıştırılarak denendi.
+
 # BB Kilit 0.1.27 — Yeni kurulum penceresi
 
 Kurulum penceresi yenilendi: okul logolu başlık, renkli durum kutusu, numaralı adım kartları (Kurulum, Kayıt, Kısayol) ve büyük onay kodu. İnternetsiz elle kayıt "Gelişmiş" bölümünde. Kurulum bitince tahta parolasız olarak onaya gider; SUPER yönetici BORUSAN DİJİTAL → BB Kilit Yönetim kartından onaylar. Kilit ekranının xfwm4 altında tam ekran açıldığı doğrulandı.

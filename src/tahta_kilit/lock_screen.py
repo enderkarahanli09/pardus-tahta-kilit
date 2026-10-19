@@ -19,6 +19,10 @@ SOCKET_PATH = "/run/tahta-kilit/verifier.sock"
 MAX_CODE_DIGITS = 6
 SCHOOL_LOGO_PATH = "/usr/share/tahta-kilit/borusan-mtal-logo.png"
 TEST_MODE = os.environ.get("TAHTA_KILIT_TEST_MODE") == "1"
+# Bu yükseklikten kısa ekranlarda (ör. 1366×768) sıkışık düzen kullanılır.
+COMPACT_MAX_HEIGHT = 900
+QR_SIZE = 320
+COMPACT_QR_SIZE = 240
 
 COLORS = {
     "background": "#0b0b0d",
@@ -59,12 +63,22 @@ def call_verifier(payload):
     return response
 
 
+def verifier_error_message(error):
+    # Kurulumda kullanıcı tahta-kilit grubuna eklenir ama grup ancak yeni oturumda geçerli olur;
+    # bu yüzden soket izin hatası "servis çalışmıyor"dan ayrı anlatılır.
+    if isinstance(error, PermissionError):
+        return "Bu oturum doğrulama servisine erişemiyor. Tahtayı yeniden başlatın (ilk kurulumdan sonra gerekir)."
+    if isinstance(error, (FileNotFoundError, ConnectionRefusedError)):
+        return "Doğrulama servisi çalışmıyor. Yönetici: systemctl status tahta-kilit-verifier.service"
+    return "Yerel doğrulama servisi yanıt vermedi. Tahtayı yeniden başlatıp tekrar deneyin."
+
+
 def build_qr_url(site_url, challenge, portal_url=DEFAULT_QR_PORTAL_URL):
     # site_url tahta servisi/master senkronizasyonu için korunur.
     return build_portal_qr_url(challenge, portal_url)
 
 
-def pixbuf_from_qr(text):
+def pixbuf_from_qr(text, size=QR_SIZE):
     image = qrcode.make(text).convert("RGB")
     buffer = BytesIO()
     image.save(buffer, format="PNG")
@@ -72,7 +86,21 @@ def pixbuf_from_qr(text):
     loader.write(buffer.getvalue())
     loader.close()
     pixbuf = loader.get_pixbuf()
-    return pixbuf.scale_simple(320, 320, GdkPixbuf.InterpType.NEAREST)
+    return pixbuf.scale_simple(size, size, GdkPixbuf.InterpType.NEAREST)
+
+
+def screen_is_compact():
+    # TAHTA_KILIT_COMPACT=1/0 ekran yüksekliğinden bağımsız zorlar (PC'de deneme için).
+    forced = os.environ.get("TAHTA_KILIT_COMPACT")
+    if forced in ("0", "1"):
+        return forced == "1"
+    display = Gdk.Display.get_default()
+    if display is None:
+        return False
+    monitor = display.get_primary_monitor() or display.get_monitor(0)
+    if monitor is None:
+        return False
+    return monitor.get_geometry().height < COMPACT_MAX_HEIGHT
 
 
 class LockScreen:
@@ -84,9 +112,13 @@ class LockScreen:
         self.code_length = MAX_CODE_DIGITS
         self.unlocked = False
         self.seconds_left = 0
+        self.compact = screen_is_compact()
+        self.qr_size = COMPACT_QR_SIZE if self.compact else QR_SIZE
 
         self.window = Gtk.Window(title="BB Kilit")
-        self.window.set_default_size(940, 900)
+        self.window.set_default_size(940, 740 if self.compact else 900)
+        if self.compact:
+            self.window.get_style_context().add_class("compact")
         self.window.set_position(Gtk.WindowPosition.CENTER)
         if not TEST_MODE:
             self.window.set_decorated(False)
@@ -131,6 +163,14 @@ class LockScreen:
         button.confirm:hover { background: #d55a0c; }
         button.key:disabled { background: #242426; color: #929299; border-color: #39393e; }
         button.small { font-size: 17px; }
+        .compact .panel { border-radius: 18px; padding: 14px 18px; }
+        .compact .title { font-size: 28px; }
+        .compact .brand-name { font-size: 15px; }
+        .compact .subtitle { font-size: 15px; }
+        .compact .section-title, .compact .status, .compact .error { font-size: 14px; }
+        .compact .code { padding: 6px 10px; font-size: 24px; letter-spacing: 7px; }
+        .compact button.key { min-width: 68px; min-height: 44px; font-size: 22px; }
+        .compact button.small { font-size: 15px; }
         """ % COLORS
         provider = Gtk.CssProvider()
         provider.load_from_data(css.encode("utf-8"))
@@ -141,18 +181,28 @@ class LockScreen:
         )
 
     def build_view(self):
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
-        root.set_border_width(24)
+        compact = self.compact
+        gap = 8 if compact else 16
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=gap)
+        root.set_border_width(12 if compact else 24)
         root.set_halign(Gtk.Align.CENTER)
         root.set_valign(Gtk.Align.CENTER)
         root.get_style_context().add_class("screen")
 
-        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        # Sıkışık düzende logo ile başlık yan yana durur; dikey alandan ~100 piksel kazanılır.
+        header = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL if compact else Gtk.Orientation.VERTICAL,
+            spacing=16 if compact else 8,
+        )
         header.set_hexpand(True)
+        if compact:
+            header.set_halign(Gtk.Align.CENTER)
         school = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         school.set_halign(Gtk.Align.CENTER)
+        school.set_valign(Gtk.Align.CENTER)
         if os.path.isfile(SCHOOL_LOGO_PATH):
-            logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(SCHOOL_LOGO_PATH, 80, 80, True)
+            logo_size = 56 if compact else 80
+            logo = GdkPixbuf.Pixbuf.new_from_file_at_scale(SCHOOL_LOGO_PATH, logo_size, logo_size, True)
             school.pack_start(Gtk.Image.new_from_pixbuf(logo), False, False, 0)
         else:
             school_name = Gtk.Label(label="Borusan Asım Kocabıyık\nMesleki ve Teknik Anadolu Lisesi")
@@ -160,8 +210,9 @@ class LockScreen:
             school_name.get_style_context().add_class("school-name")
             school.pack_start(school_name, False, False, 0)
         header.pack_start(school, False, False, 0)
-        brand = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        brand = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2 if compact else 6)
         brand.set_halign(Gtk.Align.CENTER)
+        brand.set_valign(Gtk.Align.CENTER)
         title = Gtk.Label(label="BB Kilit")
         title.get_style_context().add_class("title")
         brand.pack_start(title, False, False, 0)
@@ -181,14 +232,14 @@ class LockScreen:
         content.get_style_context().add_class("panel")
         root.pack_start(content, False, False, 0)
 
-        qr_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        qr_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6 if compact else 10)
         qr_column.set_halign(Gtk.Align.CENTER)
         qr_column.set_valign(Gtk.Align.CENTER)
         qr_caption = Gtk.Label(label="01  ·  QR KODU OKUT")
         qr_caption.get_style_context().add_class("section-title")
         qr_column.pack_start(qr_caption, False, False, 0)
         self.qr_image = Gtk.Image()
-        self.qr_image.set_size_request(320, 320)
+        self.qr_image.set_size_request(self.qr_size, self.qr_size)
         qr_column.pack_start(self.qr_image, False, False, 0)
         self.board_label = Gtk.Label(label="QR hazırlanıyor…")
         self.board_label.get_style_context().add_class("status")
@@ -204,7 +255,7 @@ class LockScreen:
         qr_column.pack_start(self.qr_countdown, False, False, 0)
         content.pack_start(qr_column, False, False, 0)
 
-        keypad_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        keypad_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7 if compact else 12)
         keypad_column.set_halign(Gtk.Align.CENTER)
         keypad_column.set_valign(Gtk.Align.CENTER)
         self.code_caption = code_caption = Gtk.Label(label="02  ·  6 HANELİ KODU GİR")
@@ -215,8 +266,8 @@ class LockScreen:
         keypad_column.pack_start(self.code_label, False, False, 2)
 
         grid = Gtk.Grid()
-        grid.set_row_spacing(9)
-        grid.set_column_spacing(9)
+        grid.set_row_spacing(6 if compact else 9)
+        grid.set_column_spacing(6 if compact else 9)
         digits = (("1", "2", "3"), ("4", "5", "6"), ("7", "8", "9"))
         for row, values in enumerate(digits):
             for column, digit in enumerate(values):
@@ -253,7 +304,7 @@ class LockScreen:
         keypad_column.pack_start(self.keyboard_label, False, False, 0)
         # Sağ alt alan sonraki görsel/metin için boş tutulur.
         footer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        footer.set_size_request(-1, 20)
+        footer.set_size_request(-1, 8 if compact else 20)
         self.footer_extension = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.footer_extension.set_halign(Gtk.Align.END)
         footer.pack_end(self.footer_extension, False, False, 0)
@@ -300,22 +351,19 @@ class LockScreen:
             # portal.json her QR'da yeniden okunur; panelden yapılan değişiklik yeniden başlatmadan uygulanır.
             portal_url = resolve_qr_portal_url(response.get("boardId"), self.config.get("qr_portal_url"))
             qr_url = build_qr_url(self.config["site_url"], response, portal_url)
-            self.qr_image.set_from_pixbuf(pixbuf_from_qr(qr_url))
+            self.qr_image.set_from_pixbuf(pixbuf_from_qr(qr_url, self.qr_size))
             self.board_label.set_text("Tahta: {}".format(response["boardId"]))
             self.manual_label.set_text(response.get("manualRequestCode", "— — — — — —"))
             self.seconds_left = response["expiresIn"]
             self.confirm_button.set_sensitive(len(self.code) == self.code_length)
             self.set_status("Telefonunuzdan aldığınız kodu girin.")
-        except Exception:
+        except Exception as error:
             self.challenge = None
             self.confirm_button.set_sensitive(False)
             self.qr_image.clear()
             self.manual_label.set_text("— — — — — —")
             self.board_label.set_text("Yerel doğrulama servisine ulaşılamıyor.")
-            self.set_status(
-                "Servis başlatılmalı ve oturum kullanıcısı tahta-kilit grubunda olmalı.",
-                is_error=True,
-            )
+            self.set_status(verifier_error_message(error), is_error=True)
         return True
 
     def show_service_error(self, response):
@@ -388,8 +436,8 @@ class LockScreen:
                     "unlockCode": self.code,
                 }
             )
-        except Exception:
-            self.set_status("Yerel doğrulama servisine ulaşılamıyor.", is_error=True)
+        except Exception as error:
+            self.set_status(verifier_error_message(error), is_error=True)
             return
 
         if not response.get("ok"):
