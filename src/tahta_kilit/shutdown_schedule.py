@@ -38,13 +38,41 @@ except Exception:  # zoneinfo/tzdata yoksa: Türkiye 2016'dan beri sürekli UTC+
     TURKEY = datetime.timezone(datetime.timedelta(hours=3))
 
 
-def build_request(board_id, key, nonce=None):
+from tahta_kilit import __version__ as PACKAGE_VERSION
+
+
+def board_data_status(board_id):
+    """Tahtanın elindeki verinin özeti (yönetim panelinde 'güncel / güncel değil' için). Sır içermez."""
+    status = {"package": PACKAGE_VERSION, "masterVersion": 0, "portalUrl": "", "shutdownTime": ""}
+    try:
+        from tahta_kilit.master_password import read_state as read_master
+        master = read_master(board_id)
+        if master:
+            status["masterVersion"] = int(master["version"])
+    except Exception:
+        pass
+    try:
+        from tahta_kilit.portal_sync import read_portal_url
+        status["portalUrl"] = read_portal_url(board_id) or ""
+    except Exception:
+        pass
+    state = read_state(board_id)
+    if state:
+        status["shutdownTime"] = state["time"]
+    return status
+
+
+def build_request(board_id, key, nonce=None, status=None):
     if nonce is None:
         nonce = secrets.token_hex(16)
     if not re.fullmatch(r"[0-9a-f]{32}", nonce):
         raise ValueError("Invalid nonce")
-    return {"action": "shutdown-sync", "version": 1, "boardId": board_id, "nonce": nonce,
-            "signature": sign(key, "shutdown-sync:v1|" + board_id + "|" + nonce)}
+    payload = {"action": "shutdown-sync", "version": 1, "boardId": board_id, "nonce": nonce,
+               "signature": sign(key, "shutdown-sync:v1|" + board_id + "|" + nonce)}
+    if status:
+        # Sunucu bunu yalnız imza doğrulandıktan sonra kaydeder; panelde tahtanın güncelliğini gösterir.
+        payload.update(status)
+    return payload
 
 
 def verify_response(data, board_id, nonce, key):
@@ -127,7 +155,7 @@ def synchronize_shutdown(config=None, key=None, opener=None, path=STATE_PATH, cl
     if urlsplit(url).hostname != "script.google.com":
         return None
     board = config["board_id"]
-    payload = build_request(board, key)
+    payload = build_request(board, key, status=board_data_status(board))
     sent = clock()
     data = post_json(url, payload, MAX_STATE_BYTES, opener)
     received = clock()
@@ -164,18 +192,10 @@ def due_target(value, current):
     return None
 
 
-def _last_done(path=STAMP_PATH):
-    try:
-        with open(path, encoding="utf-8") as stream:
-            return stream.read(32).strip()
-    except OSError:
-        return ""
-
-
-def _mark_done(day, path=STAMP_PATH):
+def _mark_done(stamp, path=STAMP_PATH):
     os.makedirs(os.path.dirname(path), mode=0o755, exist_ok=True)
     with open(path, "w", encoding="utf-8") as output:
-        output.write(day + "\n")
+        output.write(stamp + "\n")
         output.flush()
         os.fsync(output.fileno())
 
@@ -188,15 +208,15 @@ def check_and_shutdown(now=None, state_path=STATE_PATH, stamp_path=STAMP_PATH, p
     if not state or not state["time"]:
         return "otomatik kapanma kapalı"
     current = turkey_now(state, now)
+    clock = "sunucu saatiyle" if state is not None and 0 <= (time.time() if now is None else now) - state["syncedAt"] <= CLOCK_TRUST_SECONDS else "tahta saatiyle"
     day = due_target(state["time"], current)
     if not day:
-        return "bekleniyor ({} · Türkiye saati {})".format(state["time"], current.strftime("%H:%M"))
-    if _last_done(stamp_path) == day:
-        return "bugün zaten kapatıldı"
-    # Damga önce yazılır: tahta pencere içinde yeniden açılırsa aynı gün ikinci kez kapanmaz.
-    _mark_done(day, stamp_path)
+        return "bekleniyor ({} · Türkiye saati {} · {})".format(state["time"], current.strftime("%H:%M"), clock)
+    # Günlük sınır yok (kullanıcı isteği): pencere içinde açık olan tahta her seferinde kapanır; aynı gün
+    # yeniden açılsa da kapanır. Son kapatma yalnız bilgi için kaydedilir.
+    _mark_done(day + " " + state["time"], stamp_path)
     (poweroff or (lambda: subprocess.run(["/usr/bin/systemctl", "poweroff"], check=False, timeout=60)))()
-    return "kapatılıyor ({})".format(state["time"])
+    return "kapatılıyor ({} · {})".format(state["time"], clock)
 
 
 def main(argv=None):

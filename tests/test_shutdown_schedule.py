@@ -102,6 +102,22 @@ class StateTest(unittest.TestCase):
         self.assertEqual(ss.read_state(BOARD, self.path)["time"], "18:00")
 
 
+class StatusTest(unittest.TestCase):
+    def test_request_carries_board_status(self):
+        status = {"package": "0.1.31", "masterVersion": 5, "portalUrl": "https://borusandijital.s.gy/", "shutdownTime": "17:30"}
+        payload = ss.build_request(BOARD, KEY, "d" * 32, status)
+        self.assertEqual(payload["masterVersion"], 5)
+        self.assertEqual(payload["signature"], sign("shutdown-sync:v1|" + BOARD + "|" + "d" * 32))
+        self.assertFalse(any(isinstance(v, bytes) for v in payload.values()))
+
+    def test_status_without_files(self):
+        with patch.object(ss, "read_state", return_value=None):
+            status = ss.board_data_status("YOK-TAHTA")
+        self.assertEqual(status["package"], ss.PACKAGE_VERSION)
+        self.assertEqual(status["masterVersion"], 0)
+        self.assertEqual(status["shutdownTime"], "")
+
+
 class ClockAndWindowTest(unittest.TestCase):
     def test_server_offset_used_only_when_fresh(self):
         now = 1_800_000_000.0
@@ -138,15 +154,24 @@ class CheckTest(unittest.TestCase):
         with open(self.state, "w") as output:
             json.dump({"boardId": BOARD, "time": value, "offset": 0, "syncedAt": 0}, output)
 
-    def test_shuts_down_once_per_day(self):
+    def test_no_daily_limit(self):
+        # Tahta pencere içinde yeniden açılırsa yine kapanır (günlük sınır yok).
         self.write("17:30")
         now = turkey(2026, 10, 20, 17, 31).timestamp()
         calls = []
-        result = ss.check_and_shutdown(now, self.state, self.stamp, lambda: calls.append(1))
-        self.assertIn("kapatılıyor", result)
-        again = ss.check_and_shutdown(now + 60, self.state, self.stamp, lambda: calls.append(1))
-        self.assertEqual(again, "bugün zaten kapatıldı")
-        self.assertEqual(calls, [1])
+        self.assertIn("kapatılıyor", ss.check_and_shutdown(now, self.state, self.stamp, lambda: calls.append(1)))
+        self.assertIn("kapatılıyor", ss.check_and_shutdown(now + 120, self.state, self.stamp, lambda: calls.append(1)))
+        self.assertEqual(calls, [1, 1])
+
+    def test_new_time_same_day_shuts_down_again_offline(self):
+        # İnternetli denemeden sonra panelde saat değişti; tahta internetsiz (eşitleme eski) yeni saatte de kapanmalı.
+        calls = []
+        self.write("17:30")
+        ss.check_and_shutdown(turkey(2026, 10, 20, 17, 31).timestamp(), self.state, self.stamp, lambda: calls.append(1))
+        self.write("18:05")
+        result = ss.check_and_shutdown(turkey(2026, 10, 20, 18, 6).timestamp(), self.state, self.stamp, lambda: calls.append(1))
+        self.assertIn("tahta saatiyle", result)
+        self.assertEqual(calls, [1, 1])
 
     def test_disabled_and_waiting(self):
         self.write("")

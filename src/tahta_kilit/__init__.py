@@ -1,3 +1,4 @@
 """Pardus ETAP tahta kilidi."""
 
-__version__ = "0.1.18"
+# debian/changelog ile aynı tutulur; yönetim paneli tahtanın sürümünü buradan görür.
+__version__ = "0.1.31"

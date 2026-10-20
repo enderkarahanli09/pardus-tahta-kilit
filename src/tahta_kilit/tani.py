@@ -240,7 +240,8 @@ def check_services(report):
             report.fail(line, "sudo bb-kilit-tani --onar")
         else:
             report.ok(line)
-    for unit, lines in (("tahta-kilit-verifier.service", 30), ("tahta-kilit-master-sync.service", 20)):
+    for unit, lines in (("tahta-kilit-verifier.service", 30), ("tahta-kilit-master-sync.service", 20),
+                        ("tahta-kilit-kapanis.service", 6)):
         report.info("Son günlük: " + unit)
         report.block(run(["journalctl", "-b", "--no-pager", "-o", "short-monotonic", "-n", str(lines), "-u", unit])[1])
 

@@ -1,3 +1,16 @@
+tahta-kilit (0.1.31) unstable; urgency=medium
+
+  * Automatic shutdown: no daily limit. A board that is on (or turned on
+    again) within 5 minutes after the time always shuts down; fixes the
+    offline case where an earlier same-day test blocked the next shutdown.
+  * shutdown-sync reports the board's data (package, master version, QR
+    address, shutdown time) so the management panel can show each board as
+    "Güncel" or "Güncel değil" (server release 26).
+  * Diagnosis shows the shutdown check log and whether the server or board
+    clock was used.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Tue, 20 Oct 2026 17:00:00 +0300
+
 tahta-kilit (0.1.30) unstable; urgency=medium
 
   * Automatic shutdown time from the management panel (Turkey time, HH:MM):
