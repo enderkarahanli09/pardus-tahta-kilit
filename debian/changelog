@@ -1,3 +1,15 @@
+tahta-kilit (0.1.30) unstable; urgency=medium
+
+  * Automatic shutdown time from the management panel (Turkey time, HH:MM):
+    signed shutdown-sync each minute; the signed server time corrects the
+    board clock while online, offline boards use the last time with the
+    system clock. tahta-kilit-kapanis.timer powers off once per day within
+    5 minutes after the time.
+  * Diagnostics redact key-, signature- and nonce-like strings from every
+    report line (screen panel and bb-kilit-tani); shows shutdown status.
+
+ -- enderkarahanli09 <301288247+enderkarahanli09@users.noreply.github.com>  Tue, 20 Oct 2026 15:00:00 +0300
+
 tahta-kilit (0.1.29) unstable; urgency=medium
 
   * Lock screen: touch button "Hata ayrıntısı / Tanı" shows live service state

@@ -1,3 +1,7 @@
+# BB Kilit 0.1.30 — Otomatik kapanma saati
+
+Yönetim panelindeki **Otomatik kapanma saati** kartında belirlenen saatte (Türkiye saati, SS:DD) tahtalar her gün kendiliğinden kapanır. Tahta saati dakikada bir, tahta anahtarıyla imzalı `shutdown-sync` isteğiyle alır; imzalı yanıttaki sunucu saati sayesinde internete bağlı tahta kendi saati yanlış olsa da doğru zamanda kapanır. İnternet yoksa en son alınan saat sistem saatine göre uygulanır. `tahta-kilit-kapanis.timer` günde en fazla bir kez, saatten sonraki 5 dakika içinde kapatır; daha geç açılan tahta o gün kapatılmaz. Saat boş bırakılırsa otomatik kapanma kapalıdır. Tanı raporları (kilit ekranındaki panel ve `bb-kilit-tani`) artık anahtar, imza ve nonce benzeri her diziyi gizler ve kapanma durumunu gösterir. Sunucuda BB Kilit yayın 25 gerekir. `tahta-kilit_0.1.30_all.deb` paketini mevcut kurulumun üzerine yükleyin; anahtar, kimlik ve ayarlar korunur.
+
 # BB Kilit 0.1.29 — Kilit ekranında dokunmatik tanı
 
 Klavyesi olmayan tahtalar için kilit ekranına **Hata ayrıntısı / Tanı** düğmesi eklendi. Düğme, bu oturumun canlı durumunu (grup, doğrulama soketi, servis durumları) ve root tanı zamanlayıcısının son raporunu kaydırılabilir bir panelde gösterir. Yeni `tahta-kilit-tani.timer` açılıştan 20 saniye sonra ve iki dakikada bir çalışır; doğrulama servisi düşmüşse sıfırlayıp yeniden başlatır ve raporu `/run/bb-kilit-tani/rapor.txt` dosyasına yazar. Otomatik çalışma sunucuya kayıt isteği göndermez. `tahta-kilit_0.1.29_all.deb` paketini mevcut kurulumun üzerine yükleyin; anahtar, kimlik ve ayarlar korunur.

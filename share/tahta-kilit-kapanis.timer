@@ -1,0 +1,9 @@
+[Unit]
+Description=BB Kilit otomatik kapanma saati (her dakika)
+
+[Timer]
+OnCalendar=*-*-* *:*:05
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

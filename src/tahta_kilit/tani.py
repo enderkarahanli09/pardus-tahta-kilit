@@ -14,6 +14,7 @@ import grp
 import json
 import os
 import pwd
+import re
 import shutil
 import socket
 import stat
@@ -34,7 +35,32 @@ GROUP = "tahta-kilit"
 REPORT_PATH = "/var/log/bb-kilit-tani.txt"
 SCREEN_DIR = "/run/bb-kilit-tani"
 SCREEN_REPORT_PATH = SCREEN_DIR + "/rapor.txt"
-SYSTEM_UNITS = ("tahta-kilit-verifier.service", "tahta-kilit-master-sync.timer", "tahta-kilit-master-sync.service")
+SYSTEM_UNITS = ("tahta-kilit-verifier.service", "tahta-kilit-master-sync.timer", "tahta-kilit-master-sync.service",
+                "tahta-kilit-kapanis.timer")
+
+
+# Rapor kilit ekranında açılmadan önce de görülebilir; anahtar/imza/nonce gibi görünen her dizi gizlenir.
+# Apps Script /exec adresleri ("/s/AKfycb…") ve onay kodu (ABCD-1234) gizli değildir, korunur.
+SECRET_PATTERNS = (
+    re.compile(r"(?<![/A-Za-z0-9_+=-])[A-Za-z0-9+/_-]{40,}={0,2}(?![A-Za-z0-9_+/=-])"),
+    re.compile(r"(?<![0-9a-fA-F])[0-9a-fA-F]{32,}(?![0-9a-fA-F])"),
+    re.compile(r"(?i)\b(bilet|token|sig|signature|nonce|key|password|parola)=([^\s&]+)"),
+)
+
+
+def _looks_secret(match):
+    # Base64 anahtar/imza: büyük harf, küçük harf ve rakam birlikte. Dosya yolları ve tahta kimlikleri böyle değildir.
+    value = match.group(0)
+    if "AKfycb" in value:
+        return value  # Apps Script dağıtım kimliği (herkese açık /exec adresi), gizli değil
+    mixed = re.search(r"[a-z]", value) and re.search(r"[A-Z]", value) and re.search(r"[0-9]", value)
+    return "[gizlendi]" if mixed else value
+
+
+def redact(text):
+    text = SECRET_PATTERNS[0].sub(_looks_secret, text)
+    text = SECRET_PATTERNS[1].sub("[gizlendi]", text)
+    return SECRET_PATTERNS[2].sub(lambda match: match.group(1) + "=[gizlendi]", text)
 
 
 class Report:
@@ -44,6 +70,7 @@ class Report:
         self.quiet = quiet
 
     def write(self, text=""):
+        text = redact(text)
         if not self.quiet:
             print(text)
         self.lines.append(text)
@@ -172,6 +199,19 @@ def check_files(report):
     except FileNotFoundError:
         report.fail("master.json yok: master parola tahtaya hiç inmemiş",
                     "aşağıdaki 'Sunucu' bölümüne bakın; --onar eşitlemeyi dener")
+    if config:
+        from tahta_kilit import shutdown_schedule
+        state = shutdown_schedule.read_state(config["board_id"])
+        if state is None:
+            report.info("Otomatik kapanma: kayıt yok (panelde saat ayarlanmamış veya henüz eşitlenmedi)")
+        else:
+            current = shutdown_schedule.turkey_now(state)
+            age = int(datetime.datetime.now().timestamp() - state["syncedAt"])
+            report.info("Otomatik kapanma: {} · Türkiye saati şimdi {} · son eşitleme {} sn önce · saat farkı {:+.0f} sn".format(
+                state["time"] or "kapalı", current.strftime("%H:%M"), age, state["offset"]))
+            if state["time"] and abs(state["offset"]) > 120:
+                report.warn("Tahta saati sunucudan {:+.0f} sn farklı".format(state["offset"]),
+                            "internetsizken kapanma bu kadar kayabilir; tarih/saat ayarını (NTP) kontrol edin")
     try:
         with open(PORTAL_PATH, encoding="utf-8") as stream:
             portal = json.load(stream)
@@ -374,6 +414,18 @@ def check_server(report, config, key, allow_register=True):
         report.ok("portal-sync: " + (portal or "sunucuda adres ayarı yok (varsayılan kullanılır)"))
     except Exception as error:
         report.warn("portal-sync başarısız: " + describe_error(error))
+
+    try:
+        from tahta_kilit import shutdown_schedule
+        from tahta_kilit.google_http import post_json
+        payload = shutdown_schedule.build_request(config["board_id"], key)
+        result = shutdown_schedule.verify_response(post_json(url, payload), config["board_id"], payload["nonce"], key)
+        if result is None:
+            report.warn("shutdown-sync: sunucu yanıt vermedi (sunucu eski sürüm veya tahta onaysız)")
+        else:
+            report.ok("shutdown-sync: kapanma saati {}".format(result[0] or "kapalı"))
+    except Exception as error:
+        report.warn("shutdown-sync başarısız: " + describe_error(error))
 
     if not master_ok and not allow_register:
         report.info("Kayıt durumu otomatik denetimde sorulmaz (sunucuda bekleyen kayıt oluşturabilir); "

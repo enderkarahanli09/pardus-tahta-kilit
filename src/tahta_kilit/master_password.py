@@ -147,3 +147,9 @@ if __name__ == "__main__":
     except Exception as error:
         # Adres, anahtar veya istek ayrıntısı loglanmaz; yalnız hata türü.
         print("QR portal adresi güncellenemedi; mevcut adres kullanılmaya devam ediyor. Neden: " + describe_error(error))
+    try:
+        # Otomatik kapanma saati ve sunucu saati; hata diğer eşitlemeleri etkilemez.
+        from tahta_kilit.shutdown_schedule import synchronize_shutdown
+        synchronize_shutdown()
+    except Exception as error:
+        print("Kapanma saati güncellenemedi; en son alınan saat kullanılıyor. Neden: " + describe_error(error))

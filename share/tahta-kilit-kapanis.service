@@ -1,0 +1,14 @@
+[Unit]
+Description=BB Kilit otomatik kapanma saati denetimi
+
+[Service]
+Type=oneshot
+User=root
+# Kapanma saati geldiyse systemctl poweroff çalıştırır; saat yönetim panelinden imzalı gelir (shutdown.json).
+ExecStart=/usr/bin/python3 -I -m tahta_kilit.shutdown_schedule --check
+StateDirectory=tahta-kilit
+TimeoutStartSec=60
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX

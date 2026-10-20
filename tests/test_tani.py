@@ -109,6 +109,25 @@ class VerifierProbeTest(unittest.TestCase):
                 self.assertEqual(tani.ask_verifier(), "SERVİS HATASI: internal_error")
 
 
+class RedactionTest(unittest.TestCase):
+    def test_hides_secrets_keeps_useful_text(self):
+        key = base64.b64encode(KEY).decode()
+        line = ("anahtar " + key + " imza " + "UvzzYlhnIhFV94MfFKn9XFzPu1RLX3suib_91-jcmLs" + " nonce " + "d8e38427e4d826a1e4fad533ca6b9531" +
+                " qr https://borusandijital.s.gy/?v=2&board=BILISIM-05&request=UJVJ6L&sig=abc&token=xyz")
+        out = tani.redact(line)
+        for secret in (key, "UvzzYlhnIhFV94MfFKn9XFzPu1RLX3suib_91-jcmLs", "d8e38427e4d826a1e4fad533ca6b9531", "sig=abc", "token=xyz"):
+            self.assertNotIn(secret, out)
+        self.assertIn("board=BILISIM-05", out)
+        keep = ("servis " + SITE + " onay kodu 297E-C23A tahta ETAP-01-KUTUPHANE-OGRETMENLER-ODASI-BINA-A "
+                "/usr/lib/python3/dist-packages/tahta_kilit/verifier_service.py")
+        self.assertEqual(tani.redact(keep), keep)
+
+    def test_report_lines_are_redacted(self):
+        report = tani.Report(quiet=True)
+        report.ok("anahtar " + base64.b64encode(KEY).decode())
+        self.assertNotIn(base64.b64encode(KEY).decode(), "\n".join(report.lines))
+
+
 class MainTest(unittest.TestCase):
     def test_requires_root(self):
         with patch.object(tani.os, "geteuid", return_value=1000), patch("builtins.print"):

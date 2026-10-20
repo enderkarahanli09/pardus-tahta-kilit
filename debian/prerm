@@ -4,6 +4,7 @@ set -e
 if [ "$1" = "remove" ]; then
     systemctl disable --now tahta-kilit-master-sync.timer 2>/dev/null || true
     systemctl disable --now tahta-kilit-tani.timer 2>/dev/null || true
+    systemctl disable --now tahta-kilit-kapanis.timer 2>/dev/null || true
     systemctl stop tahta-kilit-master-sync.service 2>/dev/null || true
     systemctl stop tahta-kilit-verifier.service 2>/dev/null || true
     systemctl disable tahta-kilit-verifier.service 2>/dev/null || true

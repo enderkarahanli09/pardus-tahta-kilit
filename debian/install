@@ -9,3 +9,5 @@ share/setup-helper usr/lib/tahta-kilit
 share/bb-kilit-tani usr/bin
 share/tahta-kilit-tani.service lib/systemd/system
 share/tahta-kilit-tani.timer lib/systemd/system
+share/tahta-kilit-kapanis.service lib/systemd/system
+share/tahta-kilit-kapanis.timer lib/systemd/system
